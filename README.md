@@ -1,0 +1,2 @@
+# nextjs-ninja
+nextjs-ninja
