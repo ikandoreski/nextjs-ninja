@@ -25,7 +25,7 @@ env:
     secret: NINJA388_SUPABASE_SERVICE_ROLE_KEY
 
   - variable: BOOTSTRAP_ADMIN_EMAIL
-    value: admin@ninja388.com
+    value: ikandoreski@gmail.com
     availability:
       - BUILD
       - RUNTIME

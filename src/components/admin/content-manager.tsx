@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { LoaderCircle, Save } from "lucide-react";
 
+import { PublishSiteButton } from "@/components/admin/publish-site-button";
+
 type HomepageContent = {
   hero: {
     eyebrow: string;
@@ -78,7 +80,7 @@ export function ContentManager({ initialContent }: ContentManagerProps) {
         throw new Error(result.error || "Gagal menyimpan konten homepage.");
       }
 
-      setFeedback("Konten homepage berhasil disimpan.");
+      setFeedback("Draft homepage berhasil disimpan.");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Terjadi error saat menyimpan."
@@ -245,7 +247,7 @@ export function ContentManager({ initialContent }: ContentManagerProps) {
         </div>
       ) : null}
 
-      <div className="lg:col-span-2">
+      <div className="flex flex-wrap items-start gap-3 lg:col-span-2">
         <button
           type="submit"
           disabled={isSubmitting}
@@ -259,10 +261,12 @@ export function ContentManager({ initialContent }: ContentManagerProps) {
           ) : (
             <>
               <Save className="size-4" />
-              Simpan Konten Homepage
+              Simpan Draft Homepage
             </>
           )}
         </button>
+
+        <PublishSiteButton />
       </div>
     </form>
   );

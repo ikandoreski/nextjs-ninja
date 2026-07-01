@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check": "npm run lint && npm run build",
-    "bootstrap-admin": "node scripts/bootstrap-admin.mjs"
+    "bootstrap-admin": "node scripts/bootstrap-admin.mjs",
+    "publish-public": "node scripts/publish-public-pages.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

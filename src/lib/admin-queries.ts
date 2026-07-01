@@ -255,8 +255,127 @@ export async function getReviews() {
 
 type JsonRecord = Record<string, unknown>;
 
-export async function getHomepageContent() {
+type PublicationMode = "draft" | "published";
+
+function getDefaultHomepageContent() {
+  return {
+    hero: {
+      eyebrow: "Game Shop & Rental PS Premium",
+      headingLine1: "Pengalaman Gaming",
+      headingLine2: "Premium Di Tangan Anda.",
+      highlight: "Gaming",
+      description:
+        "Belanja gear & game original, sparepart, dan aksesoris dengan pengiriman seluruh Indonesia. Booking slot main PS juga bisa dilakukan lebih cepat dan rapi.",
+      primaryCtaLabel: "Booking PS Sekarang",
+      primaryCtaHref: "/rental-ps/",
+      secondaryCtaLabel: "Jelajahi Toko",
+      secondaryCtaHref: "/katalog/",
+    },
+    seo: {
+      metaTitle: "Ninja388 | Rental PS, Game Shop, Aksesori & Sparepart",
+      metaDescription:
+        "Ninja388 menyediakan rental PS premium, game PS5, aksesoris, dan sparepart dengan pengiriman seluruh Indonesia.",
+      canonicalUrl: "https://www.ninja388.com/",
+      ampUrl: "https://ampninja.org/amp/",
+      ogTitle: "Ninja388 | Rental PS, Game Shop, Aksesori & Sparepart",
+      ogDescription:
+        "Belanja gear & game original, sparepart, dan aksesoris dengan pengiriman seluruh Indonesia.",
+    },
+  };
+}
+
+function getDefaultBusinessSettings() {
+  return {
+    brandName: "Ninja388",
+    domainUrl: "https://www.ninja388.com/",
+    ampUrl: "https://ampninja.org/amp/",
+    whatsappNumber: "6285959781473",
+    phoneDisplay: "0859-5978-1473",
+    addressLines:
+      "Jl. Gajah Mada No.55\nBenua Melayu Darat\nPontianak Selatan\nKalimantan Barat 78124",
+    mapsUrl:
+      "https://www.google.com/maps/place/Ninja388/@-0.0366125,109.3395039,17z/data=!4m14!1m7!3m6!1s0x2e1d59ea1e7c79bd:0x23ab65a0802c86c6!2sNinja388!8m2!3d-0.0366179!4d109.3420788!16s%2Fg%2F11ml2n230z!3m5!1s0x2e1d59ea1e7c79bd:0x23ab65a0802c86c6!8m2!3d-0.0366179!4d109.3420788!16s%2Fg%2F11ml2n230z?entry=ttu&g_ep=EgoyMDI2MDYyOC4wIKXMDSoASAFQAw%3D%3D",
+    instagramUrl: "https://instagram.com/ninja388",
+    facebookUrl: "https://facebook.com/ninja388",
+    tiktokUrl: "https://tiktok.com/@ninja388",
+    youtubeUrl: "https://youtube.com/@ninja388",
+    customHeadScripts: "",
+    customFooterScripts: "",
+  };
+}
+
+function mapHomepagePayload(payload: JsonRecord) {
+  const defaults = getDefaultHomepageContent();
+  const hero = (payload.hero ?? {}) as JsonRecord;
+  const seo = (payload.seo ?? {}) as JsonRecord;
+
+  return {
+    hero: {
+      eyebrow: String(hero.eyebrow ?? defaults.hero.eyebrow),
+      headingLine1: String(hero.headingLine1 ?? defaults.hero.headingLine1),
+      headingLine2: String(hero.headingLine2 ?? defaults.hero.headingLine2),
+      highlight: String(hero.highlight ?? defaults.hero.highlight),
+      description: String(hero.description ?? defaults.hero.description),
+      primaryCtaLabel: String(hero.primaryCtaLabel ?? defaults.hero.primaryCtaLabel),
+      primaryCtaHref: String(hero.primaryCtaHref ?? defaults.hero.primaryCtaHref),
+      secondaryCtaLabel: String(
+        hero.secondaryCtaLabel ?? defaults.hero.secondaryCtaLabel
+      ),
+      secondaryCtaHref: String(hero.secondaryCtaHref ?? defaults.hero.secondaryCtaHref),
+    },
+    seo: {
+      metaTitle: String(seo.metaTitle ?? defaults.seo.metaTitle),
+      metaDescription: String(seo.metaDescription ?? defaults.seo.metaDescription),
+      canonicalUrl: String(seo.canonicalUrl ?? defaults.seo.canonicalUrl),
+      ampUrl: String(seo.ampUrl ?? defaults.seo.ampUrl),
+      ogTitle: String(seo.ogTitle ?? defaults.seo.ogTitle),
+      ogDescription: String(seo.ogDescription ?? defaults.seo.ogDescription),
+    },
+  };
+}
+
+function mapBusinessPayload(payload: JsonRecord) {
+  const defaults = getDefaultBusinessSettings();
+
+  return {
+    brandName: String(payload.brandName ?? defaults.brandName),
+    domainUrl: String(payload.domainUrl ?? defaults.domainUrl),
+    ampUrl: String(payload.ampUrl ?? defaults.ampUrl),
+    whatsappNumber: String(payload.whatsappNumber ?? defaults.whatsappNumber),
+    phoneDisplay: String(payload.phoneDisplay ?? defaults.phoneDisplay),
+    addressLines: String(payload.addressLines ?? defaults.addressLines),
+    mapsUrl: String(payload.mapsUrl ?? defaults.mapsUrl),
+    instagramUrl: String(payload.instagramUrl ?? defaults.instagramUrl),
+    facebookUrl: String(payload.facebookUrl ?? defaults.facebookUrl),
+    tiktokUrl: String(payload.tiktokUrl ?? defaults.tiktokUrl),
+    youtubeUrl: String(payload.youtubeUrl ?? defaults.youtubeUrl),
+    customHeadScripts: String(payload.customHeadScripts ?? defaults.customHeadScripts),
+    customFooterScripts: String(
+      payload.customFooterScripts ?? defaults.customFooterScripts
+    ),
+  };
+}
+
+export async function getHomepageContent(mode: PublicationMode = "draft") {
   const supabase = getSupabaseAdminClient();
+  if (mode === "published") {
+    const { data, error } = await supabase
+      .from("page_publications")
+      .select("payload")
+      .eq("page_key", "home")
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.payload) {
+      return getDefaultHomepageContent();
+    }
+
+    return mapHomepagePayload((data.payload ?? {}) as JsonRecord);
+  }
+
   const pageKey = "home";
   const { data: page, error: pageError } = await supabase
     .from("pages")
@@ -269,30 +388,7 @@ export async function getHomepageContent() {
   }
 
   if (!page) {
-    return {
-      hero: {
-        eyebrow: "Game Shop & Rental PS Premium",
-        headingLine1: "Pengalaman Gaming",
-        headingLine2: "Premium Di Tangan Anda.",
-        highlight: "Gaming",
-        description:
-          "Belanja gear & game original, sparepart, dan aksesoris dengan pengiriman seluruh Indonesia. Booking slot main PS juga bisa dilakukan lebih cepat dan rapi.",
-        primaryCtaLabel: "Booking PS Sekarang",
-        primaryCtaHref: "/rental-ps/",
-        secondaryCtaLabel: "Jelajahi Toko",
-        secondaryCtaHref: "/katalog/",
-      },
-      seo: {
-        metaTitle: "Ninja388 | Rental PS, Game Shop, Aksesori & Sparepart",
-        metaDescription:
-          "Ninja388 menyediakan rental PS premium, game PS5, aksesoris, dan sparepart dengan pengiriman seluruh Indonesia.",
-        canonicalUrl: "https://www.ninja388.com/",
-        ampUrl: "https://ampninja.org/amp/",
-        ogTitle: "Ninja388 | Rental PS, Game Shop, Aksesori & Sparepart",
-        ogDescription:
-          "Belanja gear & game original, sparepart, dan aksesoris dengan pengiriman seluruh Indonesia.",
-      },
-    };
+    return getDefaultHomepageContent();
   }
 
   const [{ data: blocks, error: blockError }, { data: seo, error: seoError }] =
@@ -319,41 +415,39 @@ export async function getHomepageContent() {
     (blocks ?? []).map((block) => [block.block_key, (block.content ?? {}) as JsonRecord])
   );
   const hero = blockMap.get("hero") ?? {};
-
-  return {
-    hero: {
-      eyebrow: String(hero.eyebrow ?? "Game Shop & Rental PS Premium"),
-      headingLine1: String(hero.headingLine1 ?? "Pengalaman Gaming"),
-      headingLine2: String(hero.headingLine2 ?? "Premium Di Tangan Anda."),
-      highlight: String(hero.highlight ?? "Gaming"),
-      description: String(
-        hero.description ??
-          "Belanja gear & game original, sparepart, dan aksesoris dengan pengiriman seluruh Indonesia. Booking slot main PS juga bisa dilakukan lebih cepat dan rapi."
-      ),
-      primaryCtaLabel: String(hero.primaryCtaLabel ?? "Booking PS Sekarang"),
-      primaryCtaHref: String(hero.primaryCtaHref ?? "/rental-ps/"),
-      secondaryCtaLabel: String(hero.secondaryCtaLabel ?? "Jelajahi Toko"),
-      secondaryCtaHref: String(hero.secondaryCtaHref ?? "/katalog/"),
-    },
+  return mapHomepagePayload({
+    hero,
     seo: {
-      metaTitle:
-        seo?.meta_title ?? "Ninja388 | Rental PS, Game Shop, Aksesori & Sparepart",
-      metaDescription:
-        seo?.meta_description ??
-        "Ninja388 menyediakan rental PS premium, game PS5, aksesoris, dan sparepart dengan pengiriman seluruh Indonesia.",
-      canonicalUrl: seo?.canonical_url ?? "https://www.ninja388.com/",
-      ampUrl: seo?.amp_url ?? "https://ampninja.org/amp/",
-      ogTitle:
-        seo?.og_title ?? "Ninja388 | Rental PS, Game Shop, Aksesori & Sparepart",
-      ogDescription:
-        seo?.og_description ??
-        "Belanja gear & game original, sparepart, dan aksesoris dengan pengiriman seluruh Indonesia.",
+      metaTitle: seo?.meta_title,
+      metaDescription: seo?.meta_description,
+      canonicalUrl: seo?.canonical_url,
+      ampUrl: seo?.amp_url,
+      ogTitle: seo?.og_title,
+      ogDescription: seo?.og_description,
     },
-  };
+  });
 }
 
-export async function getBusinessSettings() {
+export async function getBusinessSettings(mode: PublicationMode = "draft") {
   const supabase = getSupabaseAdminClient();
+  if (mode === "published") {
+    const { data, error } = await supabase
+      .from("page_publications")
+      .select("payload")
+      .eq("page_key", "global-settings")
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.payload) {
+      return getDefaultBusinessSettings();
+    }
+
+    return mapBusinessPayload((data.payload ?? {}) as JsonRecord);
+  }
+
   const pageKey = "global-settings";
   const { data: page, error: pageError } = await supabase
     .from("pages")
@@ -366,21 +460,7 @@ export async function getBusinessSettings() {
   }
 
   if (!page) {
-    return {
-      brandName: "Ninja388",
-      domainUrl: "https://www.ninja388.com/",
-      ampUrl: "https://ampninja.org/amp/",
-      whatsappNumber: "6285959781473",
-      phoneDisplay: "0859-5978-1473",
-      addressLines:
-        "Jl. Gajah Mada No.55\nBenua Melayu Darat\nPontianak Selatan\nKalimantan Barat 78124",
-      mapsUrl:
-        "https://www.google.com/maps/place/Ninja388/@-0.0366125,109.3395039,17z/data=!4m14!1m7!3m6!1s0x2e1d59ea1e7c79bd:0x23ab65a0802c86c6!2sNinja388!8m2!3d-0.0366179!4d109.3420788!16s%2Fg%2F11ml2n230z!3m5!1s0x2e1d59ea1e7c79bd:0x23ab65a0802c86c6!8m2!3d-0.0366179!4d109.3420788!16s%2Fg%2F11ml2n230z?entry=ttu&g_ep=EgoyMDI2MDYyOC4wIKXMDSoASAFQAw%3D%3D",
-      instagramUrl: "https://instagram.com/ninja388",
-      facebookUrl: "https://facebook.com/ninja388",
-      tiktokUrl: "https://tiktok.com/@ninja388",
-      youtubeUrl: "https://youtube.com/@ninja388",
-    };
+    return getDefaultBusinessSettings();
   }
 
   const { data: block, error: blockError } = await supabase
@@ -394,25 +474,21 @@ export async function getBusinessSettings() {
     throw blockError;
   }
 
-  const content = (block?.content ?? {}) as JsonRecord;
+  return mapBusinessPayload((block?.content ?? {}) as JsonRecord);
+}
 
-  return {
-    brandName: String(content.brandName ?? "Ninja388"),
-    domainUrl: String(content.domainUrl ?? "https://www.ninja388.com/"),
-    ampUrl: String(content.ampUrl ?? "https://ampninja.org/amp/"),
-    whatsappNumber: String(content.whatsappNumber ?? "6285959781473"),
-    phoneDisplay: String(content.phoneDisplay ?? "0859-5978-1473"),
-    addressLines: String(
-      content.addressLines ??
-        "Jl. Gajah Mada No.55\nBenua Melayu Darat\nPontianak Selatan\nKalimantan Barat 78124"
-    ),
-    mapsUrl: String(
-      content.mapsUrl ??
-        "https://www.google.com/maps/place/Ninja388/@-0.0366125,109.3395039,17z/data=!4m14!1m7!3m6!1s0x2e1d59ea1e7c79bd:0x23ab65a0802c86c6!2sNinja388!8m2!3d-0.0366179!4d109.3420788!16s%2Fg%2F11ml2n230z!3m5!1s0x2e1d59ea1e7c79bd:0x23ab65a0802c86c6!8m2!3d-0.0366179!4d109.3420788!16s%2Fg%2F11ml2n230z?entry=ttu&g_ep=EgoyMDI2MDYyOC4wIKXMDSoASAFQAw%3D%3D"
-    ),
-    instagramUrl: String(content.instagramUrl ?? "https://instagram.com/ninja388"),
-    facebookUrl: String(content.facebookUrl ?? "https://facebook.com/ninja388"),
-    tiktokUrl: String(content.tiktokUrl ?? "https://tiktok.com/@ninja388"),
-    youtubeUrl: String(content.youtubeUrl ?? "https://youtube.com/@ninja388"),
-  };
+export async function getPublishedProducts() {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("published_products")
+    .select(
+      "product_id, category_id, name, slug, short_description, description, price, stock, sku, mpn, brand, status, featured_image_url, seo_title, seo_description"
+    )
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
 }

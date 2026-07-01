@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { LoaderCircle, Save } from "lucide-react";
 
+import { PublishSiteButton } from "@/components/admin/publish-site-button";
+
 type BusinessSettings = {
   brandName: string;
   domainUrl: string;
@@ -15,6 +17,8 @@ type BusinessSettings = {
   facebookUrl: string;
   tiktokUrl: string;
   youtubeUrl: string;
+  customHeadScripts: string;
+  customFooterScripts: string;
 };
 
 type SettingsManagerProps = {
@@ -54,7 +58,7 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
         throw new Error(result.error || "Gagal menyimpan pengaturan bisnis.");
       }
 
-      setFeedback("Pengaturan bisnis berhasil disimpan.");
+      setFeedback("Draft pengaturan bisnis berhasil disimpan.");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Terjadi error saat menyimpan."
@@ -176,6 +180,40 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
         </div>
       </article>
 
+      <article className="rounded-[28px] border border-white/10 bg-zinc-950/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)] lg:col-span-2">
+        <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Integrasi</p>
+        <h2 className="mt-3 text-2xl font-bold">Custom Script Head & Footer</h2>
+        <div className="mt-5 grid gap-4">
+          <label className="text-sm text-zinc-300">
+            Custom Script Head
+            <textarea
+              rows={8}
+              value={settings.customHeadScripts}
+              onChange={(event) => updateField("customHeadScripts", event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-sm outline-none"
+              placeholder="<script>/* script head */</script>"
+            />
+          </label>
+          <label className="text-sm text-zinc-300">
+            Custom Script Footer
+            <textarea
+              rows={8}
+              value={settings.customFooterScripts}
+              onChange={(event) =>
+                updateField("customFooterScripts", event.target.value)
+              }
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-sm outline-none"
+              placeholder="<script>/* script footer */</script>"
+            />
+          </label>
+          <p className="text-sm leading-7 text-zinc-400">
+            Script ini disimpan sebagai draft lebih dulu. Setelah klik publish,
+            script akan ikut masuk ke source HTML statis saat Anda menjalankan
+            proses publish publik.
+          </p>
+        </div>
+      </article>
+
       {feedback ? (
         <div className="rounded-2xl border border-green-400/20 bg-green-500/10 px-4 py-3 text-sm text-green-100 lg:col-span-2">
           {feedback}
@@ -188,7 +226,7 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
         </div>
       ) : null}
 
-      <div className="lg:col-span-2">
+      <div className="flex flex-wrap items-start gap-3 lg:col-span-2">
         <button
           type="submit"
           disabled={isSubmitting}
@@ -202,10 +240,12 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
           ) : (
             <>
               <Save className="size-4" />
-              Simpan Pengaturan Bisnis
+              Simpan Draft Pengaturan Bisnis
             </>
           )}
         </button>
+
+        <PublishSiteButton />
       </div>
     </form>
   );

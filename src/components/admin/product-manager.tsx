@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 
+import { PublishSiteButton } from "@/components/admin/publish-site-button";
+
 type CategoryOption = {
   id: string;
   name: string;
@@ -245,8 +247,8 @@ export function ProductManager({
               {isEditing ? "Edit Produk" : "Tambah Produk Baru"}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-zinc-400">
-              Form ini langsung menyimpan data ke Supabase dan menjadi sumber data
-              utama untuk sinkronisasi katalog publik.
+              Form ini menyimpan draft produk ke Supabase. Produk baru atau edit
+              produk aktif baru tampil di website publik setelah Anda klik publish.
             </p>
           </div>
           <button
@@ -451,15 +453,17 @@ export function ProductManager({
               ) : isEditing ? (
                 <>
                   <Save className="size-4" />
-                  Simpan Perubahan
+                  Simpan Draft Perubahan
                 </>
               ) : (
                 <>
                   <Plus className="size-4" />
-                  Tambah Produk
+                  Tambah Produk Draft
                 </>
               )}
             </button>
+
+            <PublishSiteButton />
           </div>
         </form>
       </section>

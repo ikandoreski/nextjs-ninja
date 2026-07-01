@@ -15,6 +15,8 @@ type BusinessSettingsPayload = {
   facebookUrl: string;
   tiktokUrl: string;
   youtubeUrl: string;
+  customHeadScripts: string;
+  customFooterScripts: string;
 };
 
 async function requireUser() {
@@ -55,6 +57,43 @@ async function ensurePageId(pageKey: string, title: string) {
   return data.id;
 }
 
+async function saveBusinessBlock(pageId: string, payload: BusinessSettingsPayload) {
+  const supabase = getSupabaseAdminClient();
+  const { data: existing, error: readError } = await supabase
+    .from("page_blocks")
+    .select("id")
+    .eq("page_id", pageId)
+    .eq("block_key", "business")
+    .maybeSingle();
+
+  if (readError) {
+    throw readError;
+  }
+
+  if (existing?.id) {
+    const { error: updateError } = await supabase
+      .from("page_blocks")
+      .update({ content: payload })
+      .eq("id", existing.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("page_blocks").insert({
+    page_id: pageId,
+    block_key: "business",
+    content: payload,
+  });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 export async function PUT(request: Request) {
   const user = await requireUser();
   if (!user) {
@@ -62,20 +101,18 @@ export async function PUT(request: Request) {
   }
 
   const payload = (await request.json()) as BusinessSettingsPayload;
-  const supabase = getSupabaseAdminClient();
   const pageId = await ensurePageId("global-settings", "Global Settings");
 
-  const { error } = await supabase.from("page_blocks").upsert(
-    {
-      page_id: pageId,
-      block_key: "business",
-      content: payload,
-    },
-    { onConflict: "page_id,block_key" }
-  );
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  try {
+    await saveBusinessBlock(pageId, payload);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Gagal menyimpan pengaturan bisnis.",
+      },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });

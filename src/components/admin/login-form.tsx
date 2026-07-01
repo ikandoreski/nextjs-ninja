@@ -13,7 +13,7 @@ type LoginFormProps = {
 export function LoginForm({ redirectPath }: LoginFormProps) {
   const router = useRouter();
 
-  const [email, setEmail] = useState("admin@ninja388.com");
+  const [email, setEmail] = useState("ikandoreski@gmail.com");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +61,7 @@ export function LoginForm({ redirectPath }: LoginFormProps) {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="admin@ninja388.com"
+          placeholder="ikandoreski@gmail.com"
           className="mt-2 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-red-400/50 focus:bg-white/[0.08]"
         />
       </div>

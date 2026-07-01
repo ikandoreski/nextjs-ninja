@@ -1,0 +1,56 @@
+name: Publish Public Website
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_source:
+        description: Sumber pemicu publish
+        required: false
+        default: admin-panel
+      actor_email:
+        description: Email admin pemicu
+        required: false
+        default: system
+
+jobs:
+  publish-public:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Prepare admin env
+        run: |
+          cat > .env.local <<'EOF'
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EOF
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate public HTML
+        run: npm run publish-public
+
+      - name: Setup Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Write Firebase service account
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > "$RUNNER_TEMP/firebase-service-account.json"
+
+      - name: Deploy Firebase Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID"

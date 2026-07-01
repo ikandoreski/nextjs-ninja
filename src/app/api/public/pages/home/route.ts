@@ -5,8 +5,8 @@ import { getHomepageContent, getBusinessSettings } from "@/lib/admin-queries";
 export async function GET() {
   try {
     const [home, business] = await Promise.all([
-      getHomepageContent(),
-      getBusinessSettings(),
+      getHomepageContent("published"),
+      getBusinessSettings("published"),
     ]);
 
     return NextResponse.json(

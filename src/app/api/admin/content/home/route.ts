@@ -63,6 +63,89 @@ async function ensurePageId(pageKey: string, title: string) {
   return data.id;
 }
 
+async function savePageBlock(
+  pageId: string,
+  blockKey: string,
+  content: HomeContentPayload["hero"]
+) {
+  const supabase = getSupabaseAdminClient();
+  const { data: existing, error: readError } = await supabase
+    .from("page_blocks")
+    .select("id")
+    .eq("page_id", pageId)
+    .eq("block_key", blockKey)
+    .maybeSingle();
+
+  if (readError) {
+    throw readError;
+  }
+
+  if (existing?.id) {
+    const { error: updateError } = await supabase
+      .from("page_blocks")
+      .update({ content })
+      .eq("id", existing.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("page_blocks").insert({
+    page_id: pageId,
+    block_key: blockKey,
+    content,
+  });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
+async function savePageSeo(pageId: string, seo: HomeContentPayload["seo"]) {
+  const supabase = getSupabaseAdminClient();
+  const record = {
+    page_id: pageId,
+    meta_title: seo.metaTitle,
+    meta_description: seo.metaDescription,
+    canonical_url: seo.canonicalUrl,
+    amp_url: seo.ampUrl,
+    og_title: seo.ogTitle,
+    og_description: seo.ogDescription,
+  };
+
+  const { data: existing, error: readError } = await supabase
+    .from("page_seo")
+    .select("id")
+    .eq("page_id", pageId)
+    .maybeSingle();
+
+  if (readError) {
+    throw readError;
+  }
+
+  if (existing?.id) {
+    const { error: updateError } = await supabase
+      .from("page_seo")
+      .update(record)
+      .eq("id", existing.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("page_seo").insert(record);
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 export async function PUT(request: Request) {
   const user = await requireUser();
   if (!user) {
@@ -70,41 +153,24 @@ export async function PUT(request: Request) {
   }
 
   const payload = (await request.json()) as HomeContentPayload;
-  const supabase = getSupabaseAdminClient();
   const pageId = await ensurePageId("home", "Homepage Ninja388");
 
-  const { error: blockError } = await supabase.from("page_blocks").upsert(
-    {
-      page_id: pageId,
-      block_key: "hero",
-      content: payload.hero,
-    },
-    {
-      onConflict: "page_id,block_key",
-    }
-  );
-
-  if (blockError) {
-    return NextResponse.json({ error: blockError.message }, { status: 400 });
+  try {
+    await savePageBlock(pageId, "hero", payload.hero);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal menyimpan blok hero." },
+      { status: 400 }
+    );
   }
 
-  const { error: seoError } = await supabase.from("page_seo").upsert(
-    {
-      page_id: pageId,
-      meta_title: payload.seo.metaTitle,
-      meta_description: payload.seo.metaDescription,
-      canonical_url: payload.seo.canonicalUrl,
-      amp_url: payload.seo.ampUrl,
-      og_title: payload.seo.ogTitle,
-      og_description: payload.seo.ogDescription,
-    },
-    {
-      onConflict: "page_id",
-    }
-  );
-
-  if (seoError) {
-    return NextResponse.json({ error: seoError.message }, { status: 400 });
+  try {
+    await savePageSeo(pageId, payload.seo);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Gagal menyimpan SEO homepage." },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });
