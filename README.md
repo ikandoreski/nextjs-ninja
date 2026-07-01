@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ninja388 Admin Panel
 
-## Getting Started
+Admin panel operasional untuk Ninja388, dibangun dengan:
 
-First, run the development server:
+- Next.js App Router
+- Supabase Auth + PostgreSQL
+- API publik untuk sinkronisasi website statis di `app/public`
+
+## Local Development
+
+Jalankan dari folder ini:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Admin panel lokal:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `http://localhost:3001/login`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Pastikan environment berikut tersedia:
 
-## Learn More
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `BOOTSTRAP_ADMIN_EMAIL`
+- `BOOTSTRAP_ADMIN_PASSWORD`
 
-To learn more about Next.js, take a look at the following resources:
+Contoh ada di [`.env.example`](file:///C:/Users/USER/Local%20Sites/ninja-rental-ps/app/admin-panel/.env.example).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Validasi
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Untuk cek lint + build:
 
-## Deploy on Vercel
+```bash
+npm run check
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Untuk bootstrap akun admin:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run bootstrap-admin
+```
+
+## Deploy Produksi
+
+Untuk kondisi tanpa Blaze plan Firebase, jalur yang disarankan sekarang adalah:
+
+- website publik tetap di Firebase Hosting
+- admin panel deploy ke Vercel
+
+Panduan Vercel ada di [VERCEL-DEPLOY.md](file:///C:/Users/USER/Local%20Sites/ninja-rental-ps/VERCEL-DEPLOY.md).
+
+Kalau suatu saat ingin pindah lagi ke Firebase App Hosting, konfigurasi awalnya tetap tersedia di [apphosting.yaml](file:///C:/Users/USER/Local%20Sites/ninja-rental-ps/app/admin-panel/apphosting.yaml) dan panduan lama ada di [FIREBASE-DEPLOY.md](file:///C:/Users/USER/Local%20Sites/ninja-rental-ps/FIREBASE-DEPLOY.md).
+
+## Catatan Arsitektur
+
+- Admin panel tetap memakai Supabase sebagai backend utama.
+- Firebase dipakai sebagai hosting layer untuk deploy produksi.
+- Website publik statis mengambil data live dari endpoint admin panel seperti:
+  - `/api/public/pages/home`
+  - `/api/public/products`
+  - `/api/public/reviews`
+  - `/api/public/stations`

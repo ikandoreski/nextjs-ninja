@@ -1,0 +1,34 @@
+# Firebase App Hosting configuration for Ninja388 admin panel.
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    value: https://rtesergmeiwrgttumkmk.supabase.co
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    value: sb_publishable_UmQH3-lAMiULW5HZrNcprg_sLX6xMHW
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: NINJA388_SUPABASE_SERVICE_ROLE_KEY
+
+  - variable: BOOTSTRAP_ADMIN_EMAIL
+    value: admin@ninja388.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: BOOTSTRAP_ADMIN_PASSWORD
+    secret: NINJA388_BOOTSTRAP_ADMIN_PASSWORD
