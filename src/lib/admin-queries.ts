@@ -131,37 +131,62 @@ export type MediaAssetRow = {
   updatedAt: string | null;
 };
 
+type StorageListItem = {
+  name: string;
+  id?: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+  last_accessed_at?: string | null;
+  metadata?: {
+    mimetype?: string;
+    size?: number;
+  } | null;
+};
+
 export async function getMediaAssets(page = 1, pageSize = 20) {
   const supabase = getSupabaseAdminClient();
   const bucketName = process.env.SUPABASE_MEDIA_BUCKET || "media";
   const safePage = Math.max(1, Math.trunc(page) || 1);
   const safePageSize = Math.min(20, Math.max(10, Math.trunc(pageSize) || 20));
-  const from = (safePage - 1) * safePageSize;
-  const to = from + safePageSize - 1;
+  const pageLimit = 100;
+  let offset = 0;
+  const allItems: StorageListItem[] = [];
 
-  const { data, error, count } = await supabase
-    .schema("storage")
-    .from("objects")
-    .select("name, metadata, created_at, updated_at", { count: "exact" })
-    .eq("bucket_id", bucketName)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  while (true) {
+    const { data, error } = await supabase.storage.from(bucketName).list("", {
+      limit: pageLimit,
+      offset,
+      sortBy: { column: "created_at", order: "desc" },
+    });
 
-  if (error) {
-    return {
-      items: [],
-      page: safePage,
-      pageSize: safePageSize,
-      totalItems: 0,
-      totalPages: 1,
-      errorMessage:
-        error.message === `relation "storage.objects" does not exist`
-          ? "Daftar media belum tersedia di environment ini. Coba upload gambar baru terlebih dulu."
-          : `Galeri media belum bisa dimuat: ${error.message}`,
-    };
+    if (error) {
+      return {
+        items: [],
+        page: safePage,
+        pageSize: safePageSize,
+        totalItems: 0,
+        totalPages: 1,
+        errorMessage: `Galeri media belum bisa dimuat: ${error.message}`,
+      };
+    }
+
+    const filesOnly = (data ?? []).filter((item) => item.name && !item.id?.endsWith("/"));
+    allItems.push(...filesOnly);
+
+    if (!data || data.length < pageLimit) {
+      break;
+    }
+
+    offset += pageLimit;
   }
 
-  const items = (data ?? []).map((item) => {
+  const totalItems = allItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / safePageSize));
+  const currentPage = Math.min(safePage, totalPages);
+  const from = (currentPage - 1) * safePageSize;
+  const pageItems = allItems.slice(from, from + safePageSize);
+
+  const items = pageItems.map((item) => {
     const metadata =
       item.metadata && typeof item.metadata === "object"
         ? (item.metadata as Record<string, unknown>)
@@ -182,10 +207,10 @@ export async function getMediaAssets(page = 1, pageSize = 20) {
 
   return {
     items,
-    page: safePage,
+    page: currentPage,
     pageSize: safePageSize,
-    totalItems: count ?? 0,
-    totalPages: Math.max(1, Math.ceil((count ?? 0) / safePageSize)),
+    totalItems,
+    totalPages,
     errorMessage: "",
   };
 }
