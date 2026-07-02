@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Copy, ImageUp, LoaderCircle } from "lucide-react";
+import { Copy, ImageUp, LoaderCircle, Trash2 } from "lucide-react";
 
 type UploadResult = {
   path: string;
@@ -147,6 +147,7 @@ export function MediaManager({ mediaAssets }: MediaManagerProps) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [feedback, setFeedback] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -211,6 +212,43 @@ export function MediaManager({ mediaAssets }: MediaManagerProps) {
       setFeedback("URL berhasil disalin.");
     } catch {
       setErrorMessage("Gagal menyalin URL. Silakan copy manual.");
+    }
+  }
+
+  async function handleDeleteMedia(path: string) {
+    const shouldDelete = window.confirm(
+      "Hapus file media ini dari Supabase Storage? Tindakan ini tidak bisa dibatalkan."
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingPath(path);
+    setFeedback("");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ path }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal menghapus media.");
+      }
+
+      setFeedback("Media berhasil dihapus dari storage.");
+      setResult((current) => (current?.path === path ? null : current));
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Terjadi error saat menghapus media.");
+    } finally {
+      setDeletingPath(null);
     }
   }
 
@@ -333,14 +371,29 @@ export function MediaManager({ mediaAssets }: MediaManagerProps) {
                         readOnly
                         className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none"
                       />
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(item.url)}
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-zinc-200 transition hover:bg-white/10"
-                      >
-                        <Copy className="size-4" />
-                        Copy
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(item.url)}
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-zinc-200 transition hover:bg-white/10"
+                        >
+                          <Copy className="size-4" />
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingPath === item.path}
+                          onClick={() => handleDeleteMedia(item.path)}
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-red-400/30 bg-red-500/10 px-5 py-3 text-sm text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingPath === item.path ? (
+                            <LoaderCircle className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   </div>
 

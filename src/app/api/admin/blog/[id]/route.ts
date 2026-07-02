@@ -78,12 +78,17 @@ export async function DELETE(
   const postId = params.id;
 
   const supabase = getSupabaseAdminClient();
-  const { error } = await supabase.from("blog_posts").delete().eq("id", postId);
+  const [{ error: postDeleteError }, { error: publishedDeleteError }] = await Promise.all([
+    supabase.from("blog_posts").delete().eq("id", postId),
+    supabase.from("published_blog_posts").delete().eq("post_id", postId),
+  ]);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (postDeleteError || publishedDeleteError) {
+    return NextResponse.json(
+      { error: postDeleteError?.message ?? publishedDeleteError?.message ?? "Gagal menghapus artikel." },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });
 }
-

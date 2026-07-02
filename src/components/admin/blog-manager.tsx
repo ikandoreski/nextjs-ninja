@@ -220,7 +220,9 @@ export function BlogManager({ initialPosts }: BlogManagerProps) {
         resetForm();
       }
 
-      setFeedback("Artikel berhasil dihapus.");
+      setFeedback(
+        "Artikel berhasil dihapus dari panel admin. Jika artikel itu sebelumnya sudah tayang, klik Publish Semua Perubahan agar hilang dari website publik."
+      );
       router.refresh();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Terjadi error saat menghapus.");
@@ -478,4 +480,3 @@ export function BlogManager({ initialPosts }: BlogManagerProps) {
     </div>
   );
 }
-
