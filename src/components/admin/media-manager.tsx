@@ -36,13 +36,13 @@ export function MediaManager() {
         body: form,
       });
 
+      const text = await response.text();
       let data: unknown = null;
-      let text = "";
 
       try {
-        data = await response.json();
+        data = text ? JSON.parse(text) : null;
       } catch {
-        text = await response.text();
+        data = null;
       }
 
       if (!response.ok) {
