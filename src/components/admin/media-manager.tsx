@@ -27,6 +27,7 @@ type MediaAssetsPayload = {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  errorMessage: string;
 };
 
 const MAX_UPLOAD_BYTES = 2.5 * 1024 * 1024;
@@ -297,6 +298,12 @@ export function MediaManager({ mediaAssets }: MediaManagerProps) {
             })}
           </div>
         </div>
+
+        {mediaAssets.errorMessage ? (
+          <p className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            {mediaAssets.errorMessage}
+          </p>
+        ) : null}
 
         <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
           {mediaAssets.items.length === 0 ? (

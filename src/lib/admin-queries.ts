@@ -148,7 +148,17 @@ export async function getMediaAssets(page = 1, pageSize = 20) {
     .range(from, to);
 
   if (error) {
-    throw error;
+    return {
+      items: [],
+      page: safePage,
+      pageSize: safePageSize,
+      totalItems: 0,
+      totalPages: 1,
+      errorMessage:
+        error.message === `relation "storage.objects" does not exist`
+          ? "Daftar media belum tersedia di environment ini. Coba upload gambar baru terlebih dulu."
+          : `Galeri media belum bisa dimuat: ${error.message}`,
+    };
   }
 
   const items = (data ?? []).map((item) => {
@@ -176,6 +186,7 @@ export async function getMediaAssets(page = 1, pageSize = 20) {
     pageSize: safePageSize,
     totalItems: count ?? 0,
     totalPages: Math.max(1, Math.ceil((count ?? 0) / safePageSize)),
+    errorMessage: "",
   };
 }
 

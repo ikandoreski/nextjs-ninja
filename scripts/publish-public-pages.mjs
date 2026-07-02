@@ -473,16 +473,15 @@ async function getBlogPosts(supabase) {
 }
 
 async function getFeaturedReviews(supabase) {
-  const { data, error } = await supabase
-    .from("business_reviews")
-    .select("reviewer_name, rating, review_body, owner_reply, is_featured")
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw error;
-  }
-
-  const reviews = data ?? [];
+  const business = await getBusinessSettings(supabase);
+  const source = Array.isArray(business?.reviews) ? business.reviews : [];
+  const reviews = source.map((item) => ({
+    reviewer_name: item.reviewer_name,
+    rating: item.rating,
+    review_body: item.review_body,
+    owner_reply: item.owner_reply,
+    is_featured: item.is_featured,
+  }));
   const featured = reviews.filter((item) => item.is_featured);
   return (featured.length > 0 ? featured : reviews).slice(0, 3);
 }

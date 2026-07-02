@@ -5,9 +5,10 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 export async function GET() {
   const supabase = getSupabaseAdminClient();
   const { data, error } = await supabase
-    .from("business_reviews")
-    .select("reviewer_name, rating, review_body, owner_reply, is_featured, created_at")
-    .order("created_at", { ascending: true });
+    .from("page_publications")
+    .select("payload")
+    .eq("page_key", "global-settings")
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json(
@@ -21,7 +22,12 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json(data ?? [], {
+  const payload = data?.payload;
+  const reviews = payload && typeof payload === "object" && Array.isArray(payload.reviews)
+    ? payload.reviews
+    : [];
+
+  return NextResponse.json(reviews, {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "no-store",

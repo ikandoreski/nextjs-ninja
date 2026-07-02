@@ -78,6 +78,7 @@ export async function POST() {
       businessDraft,
       { data: productDrafts, error: productError },
       { data: blogDrafts, error: blogError },
+      { data: reviewDrafts, error: reviewError },
     ] = await Promise.all([
       getHomepageContent("draft"),
       getBusinessSettings("draft"),
@@ -92,10 +93,18 @@ export async function POST() {
         .select("id, slug, title, excerpt, content_markdown, thumbnail_url, status")
         .eq("status", "published")
         .order("updated_at", { ascending: false }),
+      supabase
+        .from("business_reviews")
+        .select("id, reviewer_name, rating, review_body, owner_reply, is_featured")
+        .order("created_at", { ascending: true }),
     ]);
 
     if (productError) {
       throw productError;
+    }
+
+    if (reviewError) {
+      throw reviewError;
     }
 
     const blogItemsSafe =
@@ -127,7 +136,10 @@ export async function POST() {
       {
         page_key: "global-settings",
         title: "Global Settings",
-        payload: businessDraft,
+        payload: {
+          ...businessDraft,
+          reviews: reviewDrafts ?? [],
+        },
         published_at: now,
         updated_at: now,
       },
