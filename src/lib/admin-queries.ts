@@ -122,6 +122,63 @@ export async function getBlogPosts() {
   }));
 }
 
+export type MediaAssetRow = {
+  path: string;
+  url: string;
+  contentType: string;
+  size: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export async function getMediaAssets(page = 1, pageSize = 20) {
+  const supabase = getSupabaseAdminClient();
+  const bucketName = process.env.SUPABASE_MEDIA_BUCKET || "media";
+  const safePage = Math.max(1, Math.trunc(page) || 1);
+  const safePageSize = Math.min(20, Math.max(10, Math.trunc(pageSize) || 20));
+  const from = (safePage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
+
+  const { data, error, count } = await supabase
+    .schema("storage")
+    .from("objects")
+    .select("name, metadata, created_at, updated_at", { count: "exact" })
+    .eq("bucket_id", bucketName)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw error;
+  }
+
+  const items = (data ?? []).map((item) => {
+    const metadata =
+      item.metadata && typeof item.metadata === "object"
+        ? (item.metadata as Record<string, unknown>)
+        : {};
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucketName).getPublicUrl(item.name);
+
+    return {
+      path: item.name,
+      url: publicUrl,
+      contentType: String(metadata.mimetype ?? metadata.contentType ?? "image/*"),
+      size: Number(metadata.size ?? 0),
+      createdAt: item.created_at ?? null,
+      updatedAt: item.updated_at ?? null,
+    };
+  });
+
+  return {
+    items,
+    page: safePage,
+    pageSize: safePageSize,
+    totalItems: count ?? 0,
+    totalPages: Math.max(1, Math.ceil((count ?? 0) / safePageSize)),
+  };
+}
+
 export async function getOrders() {
   const supabase = getSupabaseAdminClient();
   const [{ data, error }, { data: customers, error: customersError }] =

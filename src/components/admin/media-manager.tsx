@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Copy, ImageUp, LoaderCircle } from "lucide-react";
 
@@ -10,8 +12,56 @@ type UploadResult = {
   size: number;
 };
 
+type MediaAsset = {
+  path: string;
+  url: string;
+  contentType: string;
+  size: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type MediaAssetsPayload = {
+  items: MediaAsset[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
 const MAX_UPLOAD_BYTES = 2.5 * 1024 * 1024;
 const MAX_DIMENSION = 1920;
+
+function formatBytes(value: number) {
+  if (!value) {
+    return "0 KB";
+  }
+
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
 
 async function readImageDimensions(file: File) {
   const objectUrl = URL.createObjectURL(file);
@@ -88,7 +138,12 @@ async function compressImageForUpload(file: File) {
   }
 }
 
-export function MediaManager() {
+type MediaManagerProps = {
+  mediaAssets: MediaAssetsPayload;
+};
+
+export function MediaManager({ mediaAssets }: MediaManagerProps) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
@@ -141,6 +196,7 @@ export function MediaManager() {
           : "Upload berhasil. Gambar otomatis dikompres agar lolos batas upload Vercel."
       );
       setFile(null);
+      router.refresh();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Terjadi error saat upload.");
     } finally {
@@ -156,6 +212,9 @@ export function MediaManager() {
       setErrorMessage("Gagal menyalin URL. Silakan copy manual.");
     }
   }
+
+  const rangeStart = mediaAssets.totalItems === 0 ? 0 : (mediaAssets.page - 1) * mediaAssets.pageSize + 1;
+  const rangeEnd = Math.min(mediaAssets.totalItems, mediaAssets.page * mediaAssets.pageSize);
 
   return (
     <div className="space-y-6">
@@ -205,6 +264,112 @@ export function MediaManager() {
         ) : null}
       </section>
 
+      <section className="rounded-[28px] border border-white/10 bg-black/35 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] backdrop-blur">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.32em] text-amber-300">Galeri Media</p>
+            <p className="mt-2 text-sm leading-7 text-zinc-400">
+              Menampilkan {rangeStart}-{rangeEnd} dari {mediaAssets.totalItems} media yang sudah
+              diupload. Setiap kartu menampilkan preview, path, URL resmi, ukuran, dan tanggal
+              upload.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase tracking-[0.28em] text-zinc-500">
+              Tampilkan
+            </span>
+            {[10, 20].map((size) => {
+              const isActive = mediaAssets.pageSize === size;
+              return (
+                <Link
+                  key={size}
+                  href={`/media?page=1&pageSize=${size}`}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                    isActive
+                      ? "border-amber-300/40 bg-amber-300/10 text-amber-100"
+                      : "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+                  }`}
+                >
+                  {size}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {mediaAssets.items.length === 0 ? (
+            <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-zinc-400 xl:col-span-2">
+              Belum ada media di bucket ini. Upload gambar pertama Anda untuk mulai mengisi galeri.
+            </p>
+          ) : (
+            mediaAssets.items.map((item) => (
+              <article
+                key={item.path}
+                className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/70"
+              >
+                <div className="border-b border-white/10 bg-black/30">
+                  <img src={item.url} alt={item.path} className="h-56 w-full object-cover" />
+                </div>
+                <div className="space-y-3 p-5">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-amber-300">Path</p>
+                    <p className="mt-2 break-all text-sm text-zinc-300">{item.path}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-amber-300">URL Resmi</p>
+                    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <input
+                        value={item.url}
+                        readOnly
+                        className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(item.url)}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-zinc-200 transition hover:bg-white/10"
+                      >
+                        <Copy className="size-4" />
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 text-sm text-zinc-400 sm:grid-cols-3">
+                    <p>{item.contentType}</p>
+                    <p>{formatBytes(item.size)}</p>
+                    <p>{formatDate(item.createdAt || item.updatedAt)}</p>
+                  </div>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        {mediaAssets.totalPages > 1 ? (
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {Array.from({ length: mediaAssets.totalPages }, (_, index) => index + 1).map((page) => {
+              const isActive = page === mediaAssets.page;
+              return (
+                <Link
+                  key={page}
+                  href={`/media?page=${page}&pageSize=${mediaAssets.pageSize}`}
+                  className={`inline-flex min-w-10 items-center justify-center rounded-full border px-4 py-2 text-sm transition ${
+                    isActive
+                      ? "border-amber-300/40 bg-amber-300/10 text-amber-100"
+                      : "border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+                  }`}
+                >
+                  {page}
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
+
       {result ? (
         <section className="rounded-[28px] border border-white/10 bg-black/35 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -227,7 +392,7 @@ export function MediaManager() {
                 </button>
               </div>
               <p className="text-xs text-zinc-500">
-                {result.contentType} · {(result.size / 1024).toFixed(1)} KB
+                {result.contentType} · {formatBytes(result.size)}
               </p>
             </div>
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/40">
