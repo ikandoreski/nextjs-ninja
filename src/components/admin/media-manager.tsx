@@ -36,12 +36,26 @@ export function MediaManager() {
         body: form,
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Gagal upload gambar.");
+      let data: unknown = null;
+      let text = "";
+
+      try {
+        data = await response.json();
+      } catch {
+        text = await response.text();
       }
 
-      setResult(data);
+      if (!response.ok) {
+        const message =
+          data && typeof data === "object" && "error" in data
+            ? String((data as { error: unknown }).error || "Gagal upload gambar.")
+            : text
+              ? text.slice(0, 180)
+              : "Gagal upload gambar.";
+        throw new Error(message);
+      }
+
+      setResult(data as UploadResult);
       setFeedback("Upload berhasil. URL siap dipakai di produk atau blog.");
       setFile(null);
     } catch (error) {
@@ -142,4 +156,3 @@ export function MediaManager() {
     </div>
   );
 }
-
