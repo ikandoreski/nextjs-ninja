@@ -5,7 +5,7 @@ export default async function MediaPage() {
   return (
     <AdminShell
       title="Media Ninja388"
-      description="Upload gambar ke Firebase Storage dan gunakan URL resmi untuk blog atau produk."
+      description="Upload gambar ke Supabase Storage dan gunakan URL resmi untuk blog atau produk."
       currentPath="/media"
     >
       <MediaManager />

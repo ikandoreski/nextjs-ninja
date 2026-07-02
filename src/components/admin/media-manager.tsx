@@ -162,7 +162,7 @@ export function MediaManager() {
       <section className="rounded-[28px] border border-white/10 bg-zinc-950/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
         <p className="text-xs uppercase tracking-[0.32em] text-amber-300">Upload Gambar</p>
         <p className="mt-2 text-sm leading-7 text-zinc-400">
-          Upload ke Firebase Storage lalu gunakan URL yang diberikan untuk thumbnail blog, gambar di
+          Upload ke Supabase Storage lalu gunakan URL yang diberikan untuk thumbnail blog, gambar di
           artikel, atau featured image produk. File besar akan otomatis dikompres sebelum dikirim.
         </p>
 

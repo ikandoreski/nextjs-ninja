@@ -1,11 +1,13 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
-import { getFirebaseStorageBucket } from "@/lib/firebase-admin";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const MEDIA_BUCKET = process.env.SUPABASE_MEDIA_BUCKET || "media";
 
 async function requireUser() {
   const supabase = await getSupabaseServerClient();
@@ -21,6 +23,29 @@ function sanitizeFilename(value: string) {
     .trim()
     .replace(/\s+/g, "-")
     .replace(/[^a-zA-Z0-9._-]/g, "");
+}
+
+async function ensureMediaBucket() {
+  const supabaseAdmin = getSupabaseAdminClient();
+  const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
+
+  if (listError) {
+    throw new Error(`Gagal membaca bucket Supabase: ${listError.message}`);
+  }
+
+  const bucketExists = buckets.some((bucket) => bucket.name === MEDIA_BUCKET);
+  if (!bucketExists) {
+    const { error: createError } = await supabaseAdmin.storage.createBucket(MEDIA_BUCKET, {
+      public: true,
+      fileSizeLimit: 10 * 1024 * 1024,
+    });
+
+    if (createError && !/already exists/i.test(createError.message)) {
+      throw new Error(`Gagal membuat bucket media Supabase: ${createError.message}`);
+    }
+  }
+
+  return supabaseAdmin;
 }
 
 export async function POST(request: Request) {
@@ -51,33 +76,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const bucket = getFirebaseStorageBucket();
+    const supabaseAdmin = await ensureMediaBucket();
     const now = new Date();
     const year = String(now.getUTCFullYear());
     const month = String(now.getUTCMonth() + 1).padStart(2, "0");
     const originalName = sanitizeFilename(file.name || "upload");
     const objectPath = `uploads/${year}/${month}/${randomUUID()}-${originalName}`;
-    const token = randomUUID();
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const object = bucket.file(objectPath);
-
-    await object.save(buffer, {
-      resumable: false,
-      metadata: {
-        contentType: file.type,
-        metadata: {
-          firebaseStorageDownloadTokens: token,
-        },
-      },
+    const { error: uploadError } = await supabaseAdmin.storage.from(MEDIA_BUCKET).upload(objectPath, buffer, {
+      contentType: file.type,
+      upsert: false,
     });
 
-    const encodedPath = encodeURIComponent(objectPath);
-    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`;
+    if (uploadError) {
+      throw new Error(`Gagal upload ke Supabase Storage: ${uploadError.message}`);
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from(MEDIA_BUCKET).getPublicUrl(objectPath);
 
     return NextResponse.json({
       path: objectPath,
-      url,
+      url: publicUrl,
       contentType: file.type,
       size: file.size,
     });
