@@ -1,9 +1,11 @@
 import {
   ClipboardList,
   GalleryVerticalEnd,
+  ImageUp,
   LayoutDashboard,
   MessageSquareQuote,
   MonitorCog,
+  Newspaper,
   Package2,
   ReceiptText,
   Settings2,
@@ -13,6 +15,8 @@ import {
 export const navigationItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/produk", label: "Produk", icon: Package2 },
+  { href: "/media", label: "Media", icon: ImageUp },
+  { href: "/blog", label: "Blog", icon: Newspaper },
   { href: "/order", label: "Order Toko", icon: ReceiptText },
   { href: "/booking", label: "Booking Rental", icon: ClipboardList },
   { href: "/station", label: "Station PS", icon: MonitorCog },

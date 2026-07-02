@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LoaderCircle, Rocket } from "lucide-react";
 
 export function PublishSiteButton() {
+  const router = useRouter();
   const [isPublishing, setIsPublishing] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -27,6 +29,7 @@ export function PublishSiteButton() {
         result.message ||
           "Versi publish berhasil diperbarui dan siap dilanjutkan ke deploy website publik."
       );
+      router.refresh();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Terjadi error saat publish."

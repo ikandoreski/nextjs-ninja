@@ -403,6 +403,18 @@
         .btn-skew-content { transform: skewX(10deg); display: inline-block; }
     </style>
 <!-- CUSTOM_HEAD_SCRIPTS_START -->
+<!-- Histats.com  START  (aync)-->
+<script type="text/javascript">var _Hasync= _Hasync|| [];
+_Hasync.push(['Histats.start', '1,5008391,4,0,0,0,00010000']);
+_Hasync.push(['Histats.fasi', '1']);
+_Hasync.push(['Histats.track_hits', '']);
+(function() {
+var hs = document.createElement('script'); hs.type = 'text/javascript'; hs.async = true;
+hs.src = ('//s10.histats.com/js15_as.js');
+(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
+})();</script>
+<noscript><a href="/" target="_blank"><img  src="//sstatic1.histats.com/0.gif?5008391&101" alt="" border="0"></a></noscript>
+<!-- Histats.com  END  -->
 <!-- CUSTOM_HEAD_SCRIPTS_END -->
 </head>
 <body class="bg-brand-black text-white font-sans antialiased selection:bg-brand-red selection:text-white">
@@ -920,7 +932,7 @@
             const business = payload?.business || {};
             const brandName = String(business.brandName || 'Ninja388');
             const canonicalUrl = normalizeCanonicalUrl(seo.canonicalUrl || business.domainUrl, 'https://www.ninja388.com/');
-            const ampUrl = normalizeAbsoluteUrl(seo.ampUrl || business.ampUrl, 'https://ampninja.org/amp/');
+            const ampUrl = normalizeAbsoluteUrl(business.ampUrl || seo.ampUrl, 'https://ampninja.org/amp/');
             const metaTitle = String(seo.metaTitle || document.title || 'Ninja388');
             const metaDescription = String(
                 seo.metaDescription ||

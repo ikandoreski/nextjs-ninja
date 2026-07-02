@@ -6,7 +6,7 @@
     <title id="product-page-title">Kipas Pendingin PS5 OEM | Ninja388</title>
     <meta id="product-meta-description" name="description" content="Cari kipas pendingin PS5 OEM untuk sparepart dan perawatan mesin di Ninja388.">
     <link id="product-canonical-link" rel="canonical" href="https://www.ninja388.com/produk/kipas-pendingin-ps5-oem/">
-    <link id="product-amphtml-link" rel="amphtml" href="https://ampninja.org/amp/produk/kipas-pendingin-ps5-oem/">
+    <link id="product-amphtml-link" rel="amphtml" href="https://ampninja.org/amp/">
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
     <meta name="theme-color" content="#0a0a0a">
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
@@ -145,6 +145,18 @@
     </script>
     <style>.btn-skew { transform: skewX(-10deg); } .btn-skew-content { transform: skewX(10deg); display: inline-block; }</style>
 <!-- CUSTOM_HEAD_SCRIPTS_START -->
+<!-- Histats.com  START  (aync)-->
+<script type="text/javascript">var _Hasync= _Hasync|| [];
+_Hasync.push(['Histats.start', '1,5008391,4,0,0,0,00010000']);
+_Hasync.push(['Histats.fasi', '1']);
+_Hasync.push(['Histats.track_hits', '']);
+(function() {
+var hs = document.createElement('script'); hs.type = 'text/javascript'; hs.async = true;
+hs.src = ('//s10.histats.com/js15_as.js');
+(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
+})();</script>
+<noscript><a href="/" target="_blank"><img  src="//sstatic1.histats.com/0.gif?5008391&101" alt="" border="0"></a></noscript>
+<!-- Histats.com  END  -->
 <!-- CUSTOM_HEAD_SCRIPTS_END -->
 </head>
 <body class="bg-brand-black text-white font-sans antialiased" data-product-slug="kipas-pendingin-ps5-oem">
@@ -304,10 +316,7 @@
             const domainUrl = ensureTrailingSlash(business?.domainUrl || 'https://www.ninja388.com/');
             const siteOrigin = new URL(domainUrl).origin;
             const canonicalUrl = `${siteOrigin}/produk/${product.slug || productSlug}/`;
-            const ampBase = ensureTrailingSlash(business?.ampUrl || 'https://ampninja.org/amp/');
-            const ampOrigin = new URL(ampBase).origin;
-            const ampPrefixPath = ampBase.replace(ampOrigin, '').replace(/\/$/, '');
-            const ampUrl = `${ampOrigin}${ampPrefixPath || '/amp'}/produk/${product.slug || productSlug}/`;
+            const ampUrl = ensureTrailingSlash(business?.ampUrl || 'https://ampninja.org/amp/');
             const imageUrl = normalizeAbsoluteUrl(product.featured_image_url || `${siteOrigin}/assets/banner.jpg`, `${siteOrigin}/`);
             const metaTitle = String(product.seo_title || `${product.name} | ${brandName}`);
             const metaDescription = String(

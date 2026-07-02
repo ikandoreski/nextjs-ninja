@@ -96,6 +96,32 @@ export async function getCategories() {
   return data ?? [];
 }
 
+export async function getBlogPosts() {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select(
+      "id, slug, title, excerpt, content_markdown, thumbnail_url, status, updated_at, created_at"
+    )
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((post) => ({
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt ?? "",
+    contentMarkdown: post.content_markdown ?? "",
+    thumbnailUrl: post.thumbnail_url ?? "",
+    status: post.status,
+    updatedAt: post.updated_at,
+    createdAt: post.created_at,
+  }));
+}
+
 export async function getOrders() {
   const supabase = getSupabaseAdminClient();
   const [{ data, error }, { data: customers, error: customersError }] =

@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="catalog-page-title">Katalog Ninja388 | 4 Produk Game, Gear &amp; Konsol</title>
+    <title id="catalog-page-title">Katalog Ninja388 | 5 Produk Game, Gear &amp; Konsol</title>
     <meta id="catalog-meta-description" name="description" content="Jelajahi katalog Ninja388 berisi PlayStation 5 Console Disc Edition, DualSense Wireless Controller, EA Sports FC 26, serta gear, sparepart, dan konsol original untuk pengiriman seluruh Indonesia.">
     <link id="catalog-canonical-link" rel="canonical" href="https://www.ninja388.com/katalog/">
-    <link id="catalog-amphtml-link" rel="amphtml" href="https://ampninja.org/amp/katalog/">
+    <link id="catalog-amphtml-link" rel="amphtml" href="https://ampninja.org/amp/">
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
     <meta name="theme-color" content="#0a0a0a">
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 
     <meta property="og:type" content="website">
     <meta id="catalog-og-site-name" property="og:site_name" content="Ninja388">
-    <meta id="catalog-og-title" property="og:title" content="Katalog Ninja388 | 4 Produk Game, Gear &amp; Konsol">
+    <meta id="catalog-og-title" property="og:title" content="Katalog Ninja388 | 5 Produk Game, Gear &amp; Konsol">
     <meta id="catalog-og-description" property="og:description" content="Jelajahi katalog Ninja388 berisi PlayStation 5 Console Disc Edition, DualSense Wireless Controller, EA Sports FC 26, serta gear, sparepart, dan konsol original untuk pengiriman seluruh Indonesia.">
     <meta id="catalog-og-url" property="og:url" content="https://www.ninja388.com/katalog/">
     <meta id="catalog-og-image" property="og:image" content="https://www.ninja388.com/assets/banner.jpg">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta id="catalog-twitter-title" name="twitter:title" content="Katalog Ninja388 | 4 Produk Game, Gear &amp; Konsol">
+    <meta id="catalog-twitter-title" name="twitter:title" content="Katalog Ninja388 | 5 Produk Game, Gear &amp; Konsol">
     <meta id="catalog-twitter-description" name="twitter:description" content="Jelajahi katalog Ninja388 berisi PlayStation 5 Console Disc Edition, DualSense Wireless Controller, EA Sports FC 26, serta gear, sparepart, dan konsol original untuk pengiriman seluruh Indonesia.">
     <meta id="catalog-twitter-image" name="twitter:image" content="https://www.ninja388.com/assets/banner.jpg">
 
@@ -260,6 +260,23 @@
           "availability": "https://schema.org/InStock"
         }
       }
+    },
+    {
+      "@type": "ListItem",
+      "position": 5,
+      "url": "https://www.ninja388.com/produk/kaset-final-fantasy-xvi-ff-16/",
+      "item": {
+        "@type": "Product",
+        "name": "KASET FINAL FANTASY XVI FF 16",
+        "image": "https://www.ninja388.com/assets/banner.jpg",
+        "sku": "N388-FFX-16",
+        "offers": {
+          "@type": "Offer",
+          "price": "400000",
+          "priceCurrency": "IDR",
+          "availability": "https://schema.org/InStock"
+        }
+      }
     }
   ]
 }
@@ -297,6 +314,18 @@
         .btn-skew-content { transform: skewX(10deg); display: inline-block; }
     </style>
 <!-- CUSTOM_HEAD_SCRIPTS_START -->
+<!-- Histats.com  START  (aync)-->
+<script type="text/javascript">var _Hasync= _Hasync|| [];
+_Hasync.push(['Histats.start', '1,5008391,4,0,0,0,00010000']);
+_Hasync.push(['Histats.fasi', '1']);
+_Hasync.push(['Histats.track_hits', '']);
+(function() {
+var hs = document.createElement('script'); hs.type = 'text/javascript'; hs.async = true;
+hs.src = ('//s10.histats.com/js15_as.js');
+(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
+})();</script>
+<noscript><a href="/" target="_blank"><img  src="//sstatic1.histats.com/0.gif?5008391&101" alt="" border="0"></a></noscript>
+<!-- Histats.com  END  -->
 <!-- CUSTOM_HEAD_SCRIPTS_END -->
 </head>
 <body class="bg-brand-black text-white font-sans antialiased selection:bg-brand-red selection:text-white">
@@ -567,10 +596,7 @@
             const domainUrl = ensureTrailingSlash(business?.domainUrl || 'https://www.ninja388.com/');
             const siteOrigin = new URL(domainUrl).origin;
             const canonicalUrl = `${siteOrigin}/katalog/`;
-            const ampBase = ensureTrailingSlash(business?.ampUrl || 'https://ampninja.org/amp/');
-            const ampOrigin = new URL(ampBase).origin;
-            const ampPrefixPath = ampBase.replace(ampOrigin, '').replace(/\/$/, '');
-            const ampUrl = `${ampOrigin}${ampPrefixPath || '/amp'}/katalog/`;
+            const ampUrl = ensureTrailingSlash(business?.ampUrl || 'https://ampninja.org/amp/');
             const productCount = Array.isArray(products) ? products.length : 0;
             const featuredNames = (products || [])
                 .slice(0, 3)

@@ -73,20 +73,38 @@ export async function POST() {
   const supabase = getSupabaseAdminClient();
 
   try {
-    const [homeDraft, businessDraft, { data: productDrafts, error: productError }] =
-      await Promise.all([
-        getHomepageContent("draft"),
-        getBusinessSettings("draft"),
-        supabase
-          .from("products")
-          .select(
-            "id, category_id, name, slug, short_description, description, price, stock, sku, mpn, brand, status, featured_image_url, seo_title, seo_description"
-          )
-          .order("created_at", { ascending: false }),
-      ]);
+    const [
+      homeDraft,
+      businessDraft,
+      { data: productDrafts, error: productError },
+      { data: blogDrafts, error: blogError },
+    ] = await Promise.all([
+      getHomepageContent("draft"),
+      getBusinessSettings("draft"),
+      supabase
+        .from("products")
+        .select(
+          "id, category_id, name, slug, short_description, description, price, stock, sku, mpn, brand, status, featured_image_url, seo_title, seo_description"
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("blog_posts")
+        .select("id, slug, title, excerpt, content_markdown, thumbnail_url, status")
+        .eq("status", "published")
+        .order("updated_at", { ascending: false }),
+    ]);
 
     if (productError) {
       throw productError;
+    }
+
+    const blogItemsSafe =
+      blogError && "code" in blogError && blogError.code === "PGRST205"
+        ? []
+        : (blogDrafts ?? []);
+
+    if (blogError && (!("code" in blogError) || blogError.code !== "PGRST205")) {
+      throw blogError;
     }
 
     const now = new Date().toISOString();
@@ -173,6 +191,56 @@ export async function POST() {
 
       if (upsertProductsError) {
         throw upsertProductsError;
+      }
+    }
+
+    if (blogItemsSafe.length > 0 || blogItemsSafe.length === 0) {
+      const { data: existingPublishedPosts, error: existingPostsError } = await supabase
+        .from("published_blog_posts")
+        .select("post_id");
+
+      if (existingPostsError) {
+        if (existingPostsError.code !== "PGRST205") {
+          throw existingPostsError;
+        }
+      } else {
+        const blogIds = new Set(blogItemsSafe.map((post) => post.id));
+        const staleBlogIds = (existingPublishedPosts ?? [])
+          .map((row) => row.post_id)
+          .filter((postId) => !blogIds.has(postId));
+
+        if (staleBlogIds.length > 0) {
+          const { error: deleteError } = await supabase
+            .from("published_blog_posts")
+            .delete()
+            .in("post_id", staleBlogIds);
+
+          if (deleteError) {
+            throw deleteError;
+          }
+        }
+
+        if (blogItemsSafe.length > 0) {
+          const { error: upsertBlogError } = await supabase
+            .from("published_blog_posts")
+            .upsert(
+              blogItemsSafe.map((post) => ({
+                post_id: post.id,
+                slug: post.slug,
+                title: post.title,
+                excerpt: post.excerpt,
+                content_markdown: post.content_markdown,
+                thumbnail_url: post.thumbnail_url,
+                published_at: now,
+                updated_at: now,
+              })),
+              { onConflict: "post_id" }
+            );
+
+          if (upsertBlogError) {
+            throw upsertBlogError;
+          }
+        }
       }
     }
 

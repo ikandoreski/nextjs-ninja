@@ -9,6 +9,8 @@ import {
 import { resolve } from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
+import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import ws from "ws";
 
 function loadEnv() {
@@ -91,6 +93,10 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function escapeXml(value) {
+  return escapeHtml(value);
 }
 
 function replaceTagTextById(html, tagName, id, value) {
@@ -222,6 +228,25 @@ function cleanupStaleProductPages(publicRoot, activeSlugs) {
     if (!activeSlugs.has(entry.name)) {
       rmSync(resolve(productRoot, entry.name), { recursive: true, force: true });
       console.log(`Produk statis dihapus: ${resolve(productRoot, entry.name)}`);
+    }
+  }
+}
+
+function cleanupStaleBlogPages(publicRoot, activeSlugs) {
+  const blogRoot = resolve(publicRoot, "blog");
+  if (!existsSync(blogRoot)) {
+    return;
+  }
+
+  const entries = readdirSync(blogRoot, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    if (!activeSlugs.has(entry.name)) {
+      rmSync(resolve(blogRoot, entry.name), { recursive: true, force: true });
+      console.log(`Blog statis dihapus: ${resolve(blogRoot, entry.name)}`);
     }
   }
 }
@@ -430,6 +455,23 @@ async function getProducts(supabase) {
   return data ?? [];
 }
 
+async function getBlogPosts(supabase) {
+  const { data, error } = await supabase
+    .from("published_blog_posts")
+    .select("slug, title, excerpt, content_markdown, thumbnail_url, published_at, updated_at")
+    .order("published_at", { ascending: false });
+
+  if (error) {
+    if (error.code === "PGRST205") {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return data ?? [];
+}
+
 async function getFeaturedReviews(supabase) {
   const { data, error } = await supabase
     .from("business_reviews")
@@ -459,10 +501,7 @@ function buildCatalogMeta(products, business) {
   const domainUrl = ensureTrailingSlash(business?.domainUrl || "https://www.ninja388.com/");
   const siteOrigin = new URL(domainUrl).origin;
   const canonicalUrl = `${siteOrigin}/katalog/`;
-  const ampBase = ensureTrailingSlash(business?.ampUrl || "https://ampninja.org/amp/");
-  const ampOrigin = new URL(ampBase).origin;
-  const ampPrefixPath = ampBase.replace(ampOrigin, "").replace(/\/$/, "");
-  const ampUrl = `${ampOrigin}${ampPrefixPath || "/amp"}/katalog/`;
+  const ampUrl = ensureTrailingSlash(business?.ampUrl || "https://ampninja.org/amp/");
   const productCount = Array.isArray(products) ? products.length : 0;
   const featuredNames = (products || [])
     .slice(0, 3)
@@ -495,10 +534,7 @@ function buildProductMeta(product, business) {
   const domainUrl = ensureTrailingSlash(business?.domainUrl || "https://www.ninja388.com/");
   const siteOrigin = new URL(domainUrl).origin;
   const canonicalUrl = `${siteOrigin}/produk/${product.slug}/`;
-  const ampBase = ensureTrailingSlash(business?.ampUrl || "https://ampninja.org/amp/");
-  const ampOrigin = new URL(ampBase).origin;
-  const ampPrefixPath = ampBase.replace(ampOrigin, "").replace(/\/$/, "");
-  const ampUrl = `${ampOrigin}${ampPrefixPath || "/amp"}/produk/${product.slug}/`;
+  const ampUrl = ensureTrailingSlash(business?.ampUrl || "https://ampninja.org/amp/");
   const imageUrl = normalizeAbsoluteUrl(
     product.featured_image_url || `${siteOrigin}/assets/banner.jpg`,
     `${siteOrigin}/`
@@ -520,6 +556,460 @@ function buildProductMeta(product, business) {
     metaTitle,
     metaDescription,
   };
+}
+
+function renderBlogMarkdown(markdown) {
+  const rawHtml = marked.parse(String(markdown || ""));
+  return sanitizeHtml(rawHtml, {
+    allowedTags: [
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "p",
+      "br",
+      "strong",
+      "em",
+      "ul",
+      "ol",
+      "li",
+      "a",
+      "img",
+      "blockquote",
+      "code",
+      "pre",
+      "hr",
+    ],
+    allowedAttributes: {
+      a: ["href", "title", "target", "rel"],
+      img: ["src", "alt", "title", "loading"],
+    },
+    transformTags: {
+      a: (tagName, attribs) => {
+        const href = attribs.href || "";
+        const target = attribs.target || (href.startsWith("http") ? "_blank" : undefined);
+        const rel = target === "_blank" ? "noopener noreferrer" : attribs.rel;
+        return {
+          tagName,
+          attribs: {
+            ...attribs,
+            ...(target ? { target } : {}),
+            ...(rel ? { rel } : {}),
+          },
+        };
+      },
+      img: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          loading: attribs.loading || "lazy",
+        },
+      }),
+    },
+  });
+}
+
+function buildBlogIndexPage(posts, payload) {
+  const business = payload.business || {};
+  const brandName = String(business.brandName || "Ninja388");
+  const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
+  const siteOrigin = new URL(domainUrl).origin;
+  const canonicalUrl = `${siteOrigin}/blog/`;
+  const ampUrl = ensureTrailingSlash(business.ampUrl || "https://ampninja.org/amp/");
+  const metaTitle = `Blog ${brandName} | Artikel & Update`;
+  const metaDescription =
+    "Artikel, update, dan panduan seputar PlayStation, gear, dan aktivitas Ninja388.";
+  const bannerUrl = `${siteOrigin}/assets/banner.jpg`;
+
+  const itemsHtml = (posts || [])
+    .map((post) => {
+      const thumb = normalizeAbsoluteUrl(post.thumbnail_url || bannerUrl, `${siteOrigin}/`);
+      const excerpt = String(post.excerpt || "").trim();
+      return `
+        <article class="rounded-3xl border border-zinc-800 bg-zinc-950/70 overflow-hidden">
+          <a href="/blog/${post.slug}/" class="block">
+            <img src="${thumb}" alt="${escapeHtml(post.title)}" class="h-44 w-full object-cover">
+          </a>
+          <div class="p-6">
+            <p class="text-xs uppercase tracking-[0.32em] text-amber-300">Artikel</p>
+            <h2 class="mt-3 text-2xl font-display font-bold uppercase tracking-tight leading-tight">
+              <a href="/blog/${post.slug}/" class="hover:text-brand-gold transition-colors">${escapeHtml(
+                post.title
+              )}</a>
+            </h2>
+            ${
+              excerpt
+                ? `<p class="mt-3 text-sm leading-7 text-zinc-400">${escapeHtml(excerpt)}</p>`
+                : ""
+            }
+            <div class="mt-5">
+              <a href="/blog/${post.slug}/" class="inline-flex items-center border-2 border-brand-red px-5 py-2 btn-skew hover:bg-brand-red transition-all duration-300">
+                <span class="btn-skew-content font-display font-bold uppercase tracking-wider text-sm">Baca</span>
+              </a>
+            </div>
+          </div>
+        </article>
+      `;
+    })
+    .join("\n");
+
+  return `
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(metaTitle)}</title>
+  <meta name="description" content="${escapeHtml(metaDescription)}">
+  <link rel="canonical" href="${canonicalUrl}">
+  <link rel="amphtml" href="${ampUrl}">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${escapeHtml(brandName)}">
+  <meta property="og:title" content="${escapeHtml(metaTitle)}">
+  <meta property="og:description" content="${escapeHtml(metaDescription)}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:image" content="${bannerUrl}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(metaTitle)}">
+  <meta name="twitter:description" content="${escapeHtml(metaDescription)}">
+  <meta name="twitter:image" content="${bannerUrl}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Rajdhani', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              black: '#0a0a0a',
+              red: '#dc2626',
+              gold: '#fbbf24',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; }
+    ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+    .btn-skew { transform: skewX(-10deg); }
+    .btn-skew-content { transform: skewX(10deg); display: inline-block; }
+  </style>
+</head>
+<body class="bg-brand-black text-white font-sans antialiased selection:bg-brand-red selection:text-white">
+  <header class="sticky top-0 z-50 border-b border-zinc-800 bg-black/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <a href="/" class="flex-shrink-0">
+        <img src="/assets/logo.png" alt="Ninja388 Logo" class="h-[50px] sm:h-[64px] w-auto object-contain">
+      </a>
+      <nav class="hidden md:flex items-center gap-8">
+        <a href="/" class="text-zinc-300 hover:text-brand-gold font-display font-bold uppercase tracking-widest text-sm transition-colors">Beranda</a>
+        <a href="/katalog/" class="text-zinc-300 hover:text-brand-gold font-display font-bold uppercase tracking-widest text-sm transition-colors">Katalog</a>
+        <a href="/blog/" class="text-brand-gold font-display font-bold uppercase tracking-widest text-sm">Blog</a>
+        <a href="/kontak-ninja388/" class="text-zinc-300 hover:text-brand-gold font-display font-bold uppercase tracking-widest text-sm transition-colors">Kontak</a>
+      </nav>
+      <a href="/katalog/" class="inline-flex items-center border-2 border-brand-red px-5 py-2 btn-skew hover:bg-brand-red transition-all duration-300">
+        <span class="btn-skew-content font-display font-bold uppercase tracking-wider text-sm">Lihat Produk</span>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <section class="relative overflow-hidden border-b border-zinc-900">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.12),transparent_30%)]"></div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-24 relative z-10">
+        <div class="max-w-3xl">
+          <div class="inline-flex items-center gap-2 border border-brand-red bg-brand-red/10 px-3 py-1 mb-6">
+            <span class="text-brand-red font-display font-bold uppercase tracking-widest text-xs">Blog Ninja388</span>
+          </div>
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-bold uppercase tracking-tight leading-[1.05]">
+            Artikel & Update <span class="text-brand-gold">${escapeHtml(brandName)}</span>
+          </h1>
+          <p class="mt-6 text-lg text-zinc-400 font-light leading-relaxed">${escapeHtml(
+            metaDescription
+          )}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16 border-b border-zinc-900 bg-zinc-950/60">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        ${itemsHtml || `<p class="text-zinc-400">Belum ada artikel yang dipublish.</p>`}
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-zinc-900 bg-black">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid gap-10 md:grid-cols-3">
+      <div>
+        <img src="/assets/logo.png" alt="Ninja388 Logo" class="h-12 w-auto object-contain">
+        <p class="mt-4 text-sm text-zinc-400 leading-relaxed">
+          Artikel dan update dari Ninja388. Untuk info produk & order, langsung lihat katalog.
+        </p>
+      </div>
+      <div>
+        <p class="font-display font-bold uppercase tracking-widest text-sm text-brand-gold">Menu</p>
+        <ul class="mt-4 space-y-3 text-sm text-zinc-400">
+          <li><a href="/" class="hover:text-brand-gold transition-colors">Beranda</a></li>
+          <li><a href="/katalog/" class="hover:text-brand-gold transition-colors">Katalog</a></li>
+          <li><a href="/blog/" class="hover:text-brand-gold transition-colors">Blog</a></li>
+          <li><a href="/kontak-ninja388/" class="hover:text-brand-gold transition-colors">Kontak</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="font-display font-bold uppercase tracking-widest text-sm text-brand-gold">CTA</p>
+        <p class="mt-4 text-sm text-zinc-400 leading-relaxed">Siap cek produk terbaru?</p>
+        <a href="/katalog/" class="mt-4 inline-flex items-center border-2 border-brand-red px-5 py-2 btn-skew hover:bg-brand-red transition-all duration-300">
+          <span class="btn-skew-content font-display font-bold uppercase tracking-wider text-sm">Buka Katalog</span>
+        </a>
+      </div>
+    </div>
+    <div class="border-t border-zinc-900 py-6 text-center text-xs text-zinc-600">
+      © ${new Date().getFullYear()} ${escapeHtml(brandName)}. All rights reserved.
+    </div>
+  </footer>
+</body>
+</html>
+  `.trim();
+}
+
+function buildBlogPostPage(post, payload) {
+  const business = payload.business || {};
+  const brandName = String(business.brandName || "Ninja388");
+  const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
+  const siteOrigin = new URL(domainUrl).origin;
+  const canonicalUrl = `${siteOrigin}/blog/${post.slug}/`;
+  const ampUrl = ensureTrailingSlash(business.ampUrl || "https://ampninja.org/amp/");
+  const bannerUrl = `${siteOrigin}/assets/banner.jpg`;
+  const thumbnail = normalizeAbsoluteUrl(post.thumbnail_url || bannerUrl, `${siteOrigin}/`);
+  const excerpt = String(post.excerpt || "").trim();
+  const metaTitle = `${post.title} | Blog ${brandName}`;
+  const metaDescription = excerpt || `Artikel terbaru dari ${brandName}.`;
+  const contentHtml = renderBlogMarkdown(post.content_markdown || "");
+  const publishedAt = post.published_at || post.updated_at || new Date().toISOString();
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Beranda", item: `${siteOrigin}/` },
+          { "@type": "ListItem", position: 2, name: "Blog", item: `${siteOrigin}/blog/` },
+          { "@type": "ListItem", position: 3, name: post.title, item: canonicalUrl },
+        ],
+      },
+      {
+        "@type": "Organization",
+        name: brandName,
+        url: `${siteOrigin}/`,
+        logo: `${siteOrigin}/assets/logo.png`,
+      },
+      {
+        "@type": "BlogPosting",
+        headline: post.title,
+        datePublished: publishedAt,
+        dateModified: post.updated_at || publishedAt,
+        image: [thumbnail],
+        mainEntityOfPage: canonicalUrl,
+        author: { "@type": "Organization", name: brandName },
+        publisher: {
+          "@type": "Organization",
+          name: brandName,
+          logo: {
+            "@type": "ImageObject",
+            url: `${siteOrigin}/assets/logo.png`,
+          },
+        },
+        description: metaDescription,
+      },
+    ],
+  };
+
+  return `
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(metaTitle)}</title>
+  <meta name="description" content="${escapeHtml(metaDescription)}">
+  <link rel="canonical" href="${canonicalUrl}">
+  <link rel="amphtml" href="${ampUrl}">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="${escapeHtml(brandName)}">
+  <meta property="og:title" content="${escapeHtml(metaTitle)}">
+  <meta property="og:description" content="${escapeHtml(metaDescription)}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:image" content="${thumbnail}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(metaTitle)}">
+  <meta name="twitter:description" content="${escapeHtml(metaDescription)}">
+  <meta name="twitter:image" content="${thumbnail}">
+
+  <script type="application/ld+json">${JSON.stringify(schema)}</script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Rajdhani', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              black: '#0a0a0a',
+              red: '#dc2626',
+              gold: '#fbbf24',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; }
+    ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+    .btn-skew { transform: skewX(-10deg); }
+    .btn-skew-content { transform: skewX(10deg); display: inline-block; }
+    article h1, article h2, article h3 { font-family: Rajdhani, sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    article h2 { margin-top: 2rem; font-size: 1.75rem; }
+    article h3 { margin-top: 1.5rem; font-size: 1.35rem; }
+    article p { margin-top: 1rem; line-height: 1.85; color: #d4d4d8; }
+    article ul, article ol { margin-top: 1rem; padding-left: 1.25rem; color: #d4d4d8; }
+    article li { margin-top: 0.35rem; }
+    article a { color: #fbbf24; text-decoration: underline; }
+    article blockquote { margin-top: 1.25rem; border-left: 3px solid #dc2626; padding-left: 1rem; color: #e4e4e7; }
+    article img { margin-top: 1.25rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.12); }
+    article pre { margin-top: 1.25rem; overflow-x: auto; border-radius: 1rem; background: rgba(9,9,11,0.9); padding: 1rem; border: 1px solid rgba(255,255,255,0.10); }
+    article code { background: rgba(255,255,255,0.06); padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
+  </style>
+</head>
+<body class="bg-brand-black text-white font-sans antialiased selection:bg-brand-red selection:text-white">
+  <header class="sticky top-0 z-50 border-b border-zinc-800 bg-black/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <a href="/" class="flex-shrink-0">
+        <img src="/assets/logo.png" alt="Ninja388 Logo" class="h-[50px] sm:h-[64px] w-auto object-contain">
+      </a>
+      <nav class="hidden md:flex items-center gap-8">
+        <a href="/" class="text-zinc-300 hover:text-brand-gold font-display font-bold uppercase tracking-widest text-sm transition-colors">Beranda</a>
+        <a href="/katalog/" class="text-zinc-300 hover:text-brand-gold font-display font-bold uppercase tracking-widest text-sm transition-colors">Katalog</a>
+        <a href="/blog/" class="text-brand-gold font-display font-bold uppercase tracking-widest text-sm">Blog</a>
+        <a href="/kontak-ninja388/" class="text-zinc-300 hover:text-brand-gold font-display font-bold uppercase tracking-widest text-sm transition-colors">Kontak</a>
+      </nav>
+      <a href="/blog/" class="inline-flex items-center border-2 border-brand-red px-5 py-2 btn-skew hover:bg-brand-red transition-all duration-300">
+        <span class="btn-skew-content font-display font-bold uppercase tracking-wider text-sm">Kembali</span>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <section class="border-b border-zinc-900 bg-zinc-950/60">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <p class="text-xs uppercase tracking-[0.32em] text-amber-300">Blog ${escapeHtml(
+          brandName
+        )}</p>
+        <h1 class="mt-4 text-4xl sm:text-5xl font-display font-bold uppercase tracking-tight leading-[1.05]">
+          ${escapeHtml(post.title)}
+        </h1>
+        ${
+          excerpt
+            ? `<p class="mt-5 text-lg text-zinc-400 font-light leading-relaxed">${escapeHtml(
+                excerpt
+              )}</p>`
+            : ""
+        }
+        <div class="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-black/40">
+          <img src="${thumbnail}" alt="${escapeHtml(post.title)}" class="h-72 w-full object-cover">
+        </div>
+      </div>
+    </section>
+
+    <section class="py-14">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <article class="rounded-3xl border border-white/10 bg-black/35 p-6 sm:p-10 shadow-[0_24px_80px_rgba(0,0,0,0.18)] backdrop-blur">
+          ${contentHtml}
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-zinc-900 bg-black">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-xs text-zinc-600">© ${new Date().getFullYear()} ${escapeHtml(
+    brandName
+  )}. All rights reserved.</p>
+      <a href="/katalog/" class="inline-flex items-center border-2 border-brand-red px-5 py-2 btn-skew hover:bg-brand-red transition-all duration-300">
+        <span class="btn-skew-content font-display font-bold uppercase tracking-wider text-sm">Lihat Produk</span>
+      </a>
+    </div>
+  </footer>
+</body>
+</html>
+  `.trim();
+}
+
+function writeSitemap(publicRoot, payload, products, blogPosts) {
+  const business = payload.business || {};
+  const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
+  const siteOrigin = new URL(domainUrl).origin;
+  const now = new Date().toISOString();
+
+  const staticPaths = [
+    "/",
+    "/katalog/",
+    "/rental-ps/",
+    "/tentang-ninja388/",
+    "/kontak-ninja388/",
+    "/kebijakan-privasi/",
+    "/syarat-ketentuan/",
+    "/kebijakan-pengiriman-retur/",
+    "/blog/",
+  ];
+
+  const urls = [
+    ...staticPaths.map((path) => `${siteOrigin}${path === "/" ? "/" : path}`),
+    ...(products || []).map((product) => `${siteOrigin}/produk/${product.slug}/`),
+    ...(blogPosts || []).map((post) => `${siteOrigin}/blog/${post.slug}/`),
+  ];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
+    .map(
+      (url) =>
+        `  <url>\n    <loc>${escapeXml(url)}</loc>\n    <lastmod>${escapeXml(
+          now
+        )}</lastmod>\n  </url>`
+    )
+    .join("\n")}\n</urlset>\n`;
+
+  writeFile(resolve(publicRoot, "sitemap.xml"), xml);
 }
 
 function buildItemListSchema(name, products, limit) {
@@ -574,7 +1064,7 @@ function updateHomePageHtml(html, payload) {
     seo.canonicalUrl || business.domainUrl,
     "https://www.ninja388.com/"
   );
-  const ampUrl = normalizeAbsoluteUrl(seo.ampUrl || business.ampUrl, "https://ampninja.org/amp/");
+  const ampUrl = normalizeAbsoluteUrl(business.ampUrl || seo.ampUrl, "https://ampninja.org/amp/");
   const metaTitle = String(seo.metaTitle || "Ninja388");
   const metaDescription = String(
     seo.metaDescription ||
@@ -937,14 +1427,22 @@ async function publishPublicPages() {
   loadEnv();
 
   const supabase = createSupabaseAdmin();
-  const [home, business, products, reviews] = await Promise.all([
+  const [home, business, products, reviews, blogPosts] = await Promise.all([
     getHomepageContent(supabase),
     getBusinessSettings(supabase),
     getProducts(supabase),
     getFeaturedReviews(supabase),
+    getBlogPosts(supabase),
   ]);
 
-  const payload = { hero: home.hero, seo: home.seo, business, products, reviews };
+  const payload = {
+    hero: home.hero,
+    seo: home.seo,
+    business,
+    products,
+    reviews,
+    blogPosts,
+  };
   const publicRoot = getPublicRoot();
 
   const homePath = resolve(publicRoot, "index.html");
@@ -968,6 +1466,19 @@ async function publishPublicPages() {
 
   const activeSlugs = new Set(products.map((product) => product.slug).filter(Boolean));
   cleanupStaleProductPages(publicRoot, activeSlugs);
+
+  mkdirSync(resolve(publicRoot, "blog"), { recursive: true });
+  writeFile(resolve(publicRoot, "blog", "index.html"), buildBlogIndexPage(blogPosts, payload));
+
+  const activeBlogSlugs = new Set((blogPosts || []).map((post) => post.slug).filter(Boolean));
+  for (const post of blogPosts || []) {
+    const postDir = resolve(publicRoot, "blog", post.slug);
+    mkdirSync(postDir, { recursive: true });
+    writeFile(resolve(postDir, "index.html"), buildBlogPostPage(post, payload));
+  }
+
+  cleanupStaleBlogPages(publicRoot, activeBlogSlugs);
+  writeSitemap(publicRoot, payload, products, blogPosts);
 
   for (const htmlFile of listHtmlFiles(publicRoot)) {
     writeFile(htmlFile, injectCustomScripts(readFileSync(htmlFile, "utf8"), business));
