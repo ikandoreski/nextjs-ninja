@@ -15,6 +15,8 @@ type BusinessSettingsPayload = {
   facebookUrl: string;
   tiktokUrl: string;
   youtubeUrl: string;
+  indexNowEnabled: boolean;
+  indexNowKey: string;
   customHeadScripts: string;
   customFooterScripts: string;
 };

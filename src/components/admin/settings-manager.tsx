@@ -17,6 +17,8 @@ type BusinessSettings = {
   facebookUrl: string;
   tiktokUrl: string;
   youtubeUrl: string;
+  indexNowEnabled: boolean;
+  indexNowKey: string;
   customHeadScripts: string;
   customFooterScripts: string;
 };
@@ -177,6 +179,37 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
               className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
             />
           </label>
+        </div>
+      </article>
+
+      <article className="rounded-[28px] border border-white/10 bg-zinc-950/80 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.22)] lg:col-span-2">
+        <p className="text-xs uppercase tracking-[0.28em] text-zinc-500">Integrasi</p>
+        <h2 className="mt-3 text-2xl font-bold">IndexNow Bing</h2>
+        <div className="mt-5 grid gap-4">
+          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-4 text-sm text-zinc-200">
+            <input
+              type="checkbox"
+              checked={settings.indexNowEnabled}
+              onChange={(event) => updateField("indexNowEnabled", event.target.checked)}
+              className="size-4 rounded border-white/20 bg-black/40"
+            />
+            Aktifkan submit IndexNow otomatis setelah publish website publik selesai
+          </label>
+          <label className="text-sm text-zinc-300">
+            IndexNow Key
+            <input
+              value={settings.indexNowKey}
+              onChange={(event) => updateField("indexNowKey", event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
+              placeholder="misal: 7f3b3e8e1b2d4c8f9a0e112233445566"
+            />
+          </label>
+          <p className="text-sm leading-7 text-zinc-400">
+            Tidak memerlukan API token Bing. Cukup isi key, simpan draft, lalu klik
+            Publish Semua Perubahan. Sistem akan membuat file verifikasi
+            <code className="mx-1 rounded bg-black/40 px-2 py-1 text-xs">/indexnow-key.txt</code>
+            dan mengirim URL dari sitemap ke IndexNow setelah deploy publik selesai.
+          </p>
         </div>
       </article>
 

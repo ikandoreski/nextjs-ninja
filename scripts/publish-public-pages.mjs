@@ -82,6 +82,20 @@ function normalizeCanonicalUrl(value, fallback) {
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 
+function toBoolean(value, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+
+  return fallback;
+}
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -407,6 +421,8 @@ async function getBusinessSettings(supabase) {
     facebookUrl: "https://facebook.com/ninja388",
     tiktokUrl: "https://tiktok.com/@ninja388",
     youtubeUrl: "https://youtube.com/@ninja388",
+    indexNowEnabled: false,
+    indexNowKey: "",
     customHeadScripts: "",
     customFooterScripts: "",
   };
@@ -437,6 +453,47 @@ async function getBusinessSettings(supabase) {
     ...defaults,
     ...(data?.content ?? {}),
   };
+}
+
+function getPublicUrlList(payload, products, blogPosts) {
+  const business = payload.business || {};
+  const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
+  const siteOrigin = new URL(domainUrl).origin;
+
+  const staticPaths = [
+    "/",
+    "/katalog/",
+    "/rental-ps/",
+    "/tentang-ninja388/",
+    "/kontak-ninja388/",
+    "/kebijakan-privasi/",
+    "/syarat-ketentuan/",
+    "/kebijakan-pengiriman-retur/",
+    "/blog/",
+  ];
+
+  return [
+    ...staticPaths.map((path) => `${siteOrigin}${path === "/" ? "/" : path}`),
+    ...(products || []).map((product) => `${siteOrigin}/produk/${product.slug}/`),
+    ...(blogPosts || []).map((post) => `${siteOrigin}/blog/${post.slug}/`),
+  ];
+}
+
+function writeIndexNowVerificationFile(publicRoot, business) {
+  const indexNowEnabled = toBoolean(business?.indexNowEnabled, false);
+  const indexNowKey = String(business?.indexNowKey || "").trim();
+  const keyFilePath = resolve(publicRoot, "indexnow-key.txt");
+
+  if (!indexNowEnabled || !indexNowKey) {
+    if (existsSync(keyFilePath)) {
+      rmSync(keyFilePath, { force: true });
+      console.log(`IndexNow key file dihapus: ${keyFilePath}`);
+    }
+    return;
+  }
+
+  writeFileSync(keyFilePath, `${indexNowKey}\n`, "utf8");
+  console.log(`IndexNow key file diperbarui: ${keyFilePath}`);
 }
 
 async function getProducts(supabase) {
@@ -976,28 +1033,8 @@ function buildBlogPostPage(post, payload) {
 }
 
 function writeSitemap(publicRoot, payload, products, blogPosts) {
-  const business = payload.business || {};
-  const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
-  const siteOrigin = new URL(domainUrl).origin;
   const now = new Date().toISOString();
-
-  const staticPaths = [
-    "/",
-    "/katalog/",
-    "/rental-ps/",
-    "/tentang-ninja388/",
-    "/kontak-ninja388/",
-    "/kebijakan-privasi/",
-    "/syarat-ketentuan/",
-    "/kebijakan-pengiriman-retur/",
-    "/blog/",
-  ];
-
-  const urls = [
-    ...staticPaths.map((path) => `${siteOrigin}${path === "/" ? "/" : path}`),
-    ...(products || []).map((product) => `${siteOrigin}/produk/${product.slug}/`),
-    ...(blogPosts || []).map((post) => `${siteOrigin}/blog/${post.slug}/`),
-  ];
+  const urls = getPublicUrlList(payload, products, blogPosts);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
     .map(
@@ -1478,6 +1515,7 @@ async function publishPublicPages() {
 
   cleanupStaleBlogPages(publicRoot, activeBlogSlugs);
   writeSitemap(publicRoot, payload, products, blogPosts);
+  writeIndexNowVerificationFile(publicRoot, business);
 
   for (const htmlFile of listHtmlFiles(publicRoot)) {
     writeFile(htmlFile, injectCustomScripts(readFileSync(htmlFile, "utf8"), business));

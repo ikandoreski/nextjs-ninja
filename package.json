@@ -9,7 +9,8 @@
     "lint": "eslint",
     "check": "npm run lint && npm run build",
     "bootstrap-admin": "node scripts/bootstrap-admin.mjs",
-    "publish-public": "node scripts/publish-public-pages.mjs"
+    "publish-public": "node scripts/publish-public-pages.mjs",
+    "submit-indexnow": "node scripts/submit-indexnow.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

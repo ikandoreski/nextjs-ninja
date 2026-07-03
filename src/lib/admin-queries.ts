@@ -469,9 +469,25 @@ function getDefaultBusinessSettings() {
     facebookUrl: "https://facebook.com/ninja388",
     tiktokUrl: "https://tiktok.com/@ninja388",
     youtubeUrl: "https://youtube.com/@ninja388",
+    indexNowEnabled: false,
+    indexNowKey: "",
     customHeadScripts: "",
     customFooterScripts: "",
   };
+}
+
+function toBoolean(value: unknown, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+
+  return fallback;
 }
 
 function mapHomepagePayload(payload: JsonRecord) {
@@ -519,6 +535,8 @@ function mapBusinessPayload(payload: JsonRecord) {
     facebookUrl: String(payload.facebookUrl ?? defaults.facebookUrl),
     tiktokUrl: String(payload.tiktokUrl ?? defaults.tiktokUrl),
     youtubeUrl: String(payload.youtubeUrl ?? defaults.youtubeUrl),
+    indexNowEnabled: toBoolean(payload.indexNowEnabled, defaults.indexNowEnabled),
+    indexNowKey: String(payload.indexNowKey ?? defaults.indexNowKey),
     customHeadScripts: String(payload.customHeadScripts ?? defaults.customHeadScripts),
     customFooterScripts: String(
       payload.customFooterScripts ?? defaults.customFooterScripts
