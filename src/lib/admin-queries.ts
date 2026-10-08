@@ -423,6 +423,34 @@ export async function getReviews() {
   }));
 }
 
+export async function getRedirects(): Promise<
+  Array<{
+    id: string;
+    source: string;
+    destination: string;
+    type: "301" | "302";
+    active: boolean;
+  }>
+> {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("redirect_rules")
+    .select("id, source, destination, type, active")
+    .order("source", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((rule) => ({
+    id: rule.id,
+    source: rule.source,
+    destination: rule.destination,
+    type: rule.type === "302" ? "302" : "301",
+    active: rule.active !== false,
+  }));
+}
+
 type JsonRecord = Record<string, unknown>;
 
 type PublicationMode = "draft" | "published";

@@ -1,5 +1,6 @@
 import {
   ClipboardList,
+  CornerDownRight,
   GalleryVerticalEnd,
   ImageUp,
   LayoutDashboard,
@@ -23,6 +24,7 @@ export const navigationItems = [
   { href: "/review", label: "Review", icon: MessageSquareQuote },
   { href: "/konten", label: "Konten", icon: GalleryVerticalEnd },
   { href: "/pengaturan", label: "Pengaturan", icon: Settings2 },
+  { href: "/redirect", label: "Redirect", icon: CornerDownRight },
   { href: "/keamanan", label: "Keamanan", icon: ShieldCheck },
 ];
 

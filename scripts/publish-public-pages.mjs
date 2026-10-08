@@ -512,6 +512,36 @@ function writeIndexNowVerificationFile(publicRoot, business) {
   console.log(`IndexNow key file diperbarui: ${keyFilePath}`);
 }
 
+async function getRedirectRules(supabase) {
+  const { data, error } = await supabase
+    .from("redirect_rules")
+    .select("source, destination, type")
+    .eq("active", true)
+    .order("source", { ascending: true });
+
+  if (error) {
+    if (error.code === "PGRST205") {
+      return null;
+    }
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+function writeRedirectsToFirebase(redirectRules) {
+  const firebaseJsonPath = resolve(process.cwd(), "firebase.json");
+  const firebaseConfig = JSON.parse(readFileSync(firebaseJsonPath, "utf8"));
+  firebaseConfig.hosting = firebaseConfig.hosting ?? {};
+  firebaseConfig.hosting.redirects = redirectRules.map((rule) => ({
+    source: rule.source,
+    destination: rule.destination,
+    type: rule.type === "302" ? 302 : 301,
+  }));
+  writeFileSync(firebaseJsonPath, `${JSON.stringify(firebaseConfig, null, 2)}\n`, "utf8");
+  console.log(`Redirect Firebase diperbarui: ${redirectRules.length} aturan.`);
+}
+
 async function getProducts(supabase) {
   const { data, error } = await supabase
     .from("published_products")
@@ -1532,6 +1562,11 @@ async function publishPublicPages() {
   cleanupStaleBlogPages(publicRoot, activeBlogSlugs);
   writeSitemap(publicRoot, payload, products, blogPosts);
   writeIndexNowVerificationFile(publicRoot, business);
+
+  const redirectRules = await getRedirectRules(supabase);
+  if (redirectRules !== null) {
+    writeRedirectsToFirebase(redirectRules);
+  }
 
   for (const htmlFile of listHtmlFiles(publicRoot)) {
     const html = readFileSync(htmlFile, "utf8");
