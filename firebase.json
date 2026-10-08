@@ -12,6 +12,18 @@
       "**/*.zip"
     ],
     "trailingSlash": true,
+    "redirects": [
+      {
+        "source": "/amp",
+        "destination": "https://tokoninja.b-cdn.net/",
+        "type": 301
+      },
+      {
+        "source": "/amp/**",
+        "destination": "https://tokoninja.b-cdn.net/",
+        "type": 301
+      }
+    ],
     "headers": [
       {
         "source": "**/*.@(html|xml|txt)",
