@@ -82,6 +82,22 @@ function normalizeCanonicalUrl(value, fallback) {
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 
+function getAmpUrl(business) {
+  return String(business?.ampUrl ?? "").trim();
+}
+
+function updateAmpHtmlLink(html, ampUrl) {
+  const value = String(ampUrl ?? "").trim();
+  if (!value) {
+    return html;
+  }
+
+  return html.replace(
+    /(<link\b[^>]*\brel=["']amphtml["'][^>]*\bhref=["'])[^"']*(?=["'])/gi,
+    `$1${escapeHtml(value)}`
+  );
+}
+
 function toBoolean(value, fallback = false) {
   if (typeof value === "boolean") {
     return value;
@@ -557,7 +573,7 @@ function buildCatalogMeta(products, business) {
   const domainUrl = ensureTrailingSlash(business?.domainUrl || "https://www.ninja388.com/");
   const siteOrigin = new URL(domainUrl).origin;
   const canonicalUrl = `${siteOrigin}/katalog/`;
-  const ampUrl = ensureTrailingSlash(business?.ampUrl || "https://ampninja.org/amp/");
+  const ampUrl = getAmpUrl(business);
   const productCount = Array.isArray(products) ? products.length : 0;
   const featuredNames = (products || [])
     .slice(0, 3)
@@ -590,7 +606,7 @@ function buildProductMeta(product, business) {
   const domainUrl = ensureTrailingSlash(business?.domainUrl || "https://www.ninja388.com/");
   const siteOrigin = new URL(domainUrl).origin;
   const canonicalUrl = `${siteOrigin}/produk/${product.slug}/`;
-  const ampUrl = ensureTrailingSlash(business?.ampUrl || "https://ampninja.org/amp/");
+  const ampUrl = getAmpUrl(business);
   const imageUrl = normalizeAbsoluteUrl(
     product.featured_image_url || `${siteOrigin}/assets/banner.jpg`,
     `${siteOrigin}/`
@@ -673,7 +689,7 @@ function buildBlogIndexPage(posts, payload) {
   const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
   const siteOrigin = new URL(domainUrl).origin;
   const canonicalUrl = `${siteOrigin}/blog/`;
-  const ampUrl = ensureTrailingSlash(business.ampUrl || "https://ampninja.org/amp/");
+  const ampUrl = getAmpUrl(business);
   const metaTitle = `Blog ${brandName} | Artikel & Update`;
   const metaDescription =
     "Artikel, update, dan panduan seputar PlayStation, gear, dan aktivitas Ninja388.";
@@ -851,7 +867,7 @@ function buildBlogPostPage(post, payload) {
   const domainUrl = ensureTrailingSlash(business.domainUrl || "https://www.ninja388.com/");
   const siteOrigin = new URL(domainUrl).origin;
   const canonicalUrl = `${siteOrigin}/blog/${post.slug}/`;
-  const ampUrl = ensureTrailingSlash(business.ampUrl || "https://ampninja.org/amp/");
+  const ampUrl = getAmpUrl(business);
   const bannerUrl = `${siteOrigin}/assets/banner.jpg`;
   const thumbnail = normalizeAbsoluteUrl(post.thumbnail_url || bannerUrl, `${siteOrigin}/`);
   const excerpt = String(post.excerpt || "").trim();
@@ -1100,7 +1116,7 @@ function updateHomePageHtml(html, payload) {
     seo.canonicalUrl || business.domainUrl,
     "https://www.ninja388.com/"
   );
-  const ampUrl = normalizeAbsoluteUrl(business.ampUrl || seo.ampUrl, "https://ampninja.org/amp/");
+  const ampUrl = getAmpUrl(business);
   const metaTitle = String(seo.metaTitle || "Ninja388");
   const metaDescription = String(
     seo.metaDescription ||
@@ -1518,7 +1534,9 @@ async function publishPublicPages() {
   writeIndexNowVerificationFile(publicRoot, business);
 
   for (const htmlFile of listHtmlFiles(publicRoot)) {
-    writeFile(htmlFile, injectCustomScripts(readFileSync(htmlFile, "utf8"), business));
+    const html = readFileSync(htmlFile, "utf8");
+    const withCustomScripts = injectCustomScripts(html, business);
+    writeFile(htmlFile, updateAmpHtmlLink(withCustomScripts, business?.ampUrl));
   }
 
   console.log("Publish statis SEO selesai. Lanjutkan dengan deploy Firebase Hosting.");

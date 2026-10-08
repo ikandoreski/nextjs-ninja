@@ -21,7 +21,6 @@ type HomepageContent = {
     metaTitle: string;
     metaDescription: string;
     canonicalUrl: string;
-    ampUrl: string;
     ogTitle: string;
     ogDescription: string;
   };
@@ -204,14 +203,6 @@ export function ContentManager({ initialContent }: ContentManagerProps) {
             <input
               value={content.seo.canonicalUrl}
               onChange={(event) => updateSeo("canonicalUrl", event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
-            />
-          </label>
-          <label className="text-sm text-zinc-300">
-            AMP URL
-            <input
-              value={content.seo.ampUrl}
-              onChange={(event) => updateSeo("ampUrl", event.target.value)}
               className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none"
             />
           </label>

@@ -19,7 +19,6 @@ type HomeContentPayload = {
     metaTitle: string;
     metaDescription: string;
     canonicalUrl: string;
-    ampUrl: string;
     ogTitle: string;
     ogDescription: string;
   };
@@ -111,7 +110,6 @@ async function savePageSeo(pageId: string, seo: HomeContentPayload["seo"]) {
     meta_title: seo.metaTitle,
     meta_description: seo.metaDescription,
     canonical_url: seo.canonicalUrl,
-    amp_url: seo.ampUrl,
     og_title: seo.ogTitle,
     og_description: seo.ogDescription,
   };
